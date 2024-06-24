@@ -9,8 +9,9 @@ import {
   GRAVITY,
   TIME_CONSTANT,
 } from "../../constants";
+import { Entity } from "../Entity";
 
-export class Sprite {
+export class Sprite extends Entity {
   ctx = getCtx();
   mass = 0;
   velocity: XY = { x: 0, y: 0 };
@@ -19,24 +20,21 @@ export class Sprite {
   isOnLeftWall = false;
   isOnRightWall = false;
 
-  constructor(
-    protected position: XY,
-    protected volume: { w: number; h: number },
-    protected fill: string,
-    protected density?: number,
-  ) {}
+  constructor(...args: ConstructorParameters<typeof Entity>) {
+    super(...args);
+  }
 
-  draw = () => {
-    const {
-      position: { x, y },
-      volume: { w, h },
-      fill,
-      density,
-    } = this;
-    this.ctx.fillStyle = fill;
-    this.ctx.fillRect(x, y, w, h);
-    this.mass = w * h * (density ?? DENSITY_CONSTANT);
-  };
+  // draw = () => {
+  //   const {
+  //     position: { x, y },
+  //     volume: { w, h },
+  //     fill,
+  //     density,
+  //   } = this;
+  //   this.ctx.fillStyle = fill;
+  //   this.ctx.fillRect(x, y, w, h);
+  //   this.mass = w * h * (density ?? DENSITY_CONSTANT);
+  // };
 
   updatePosition = (dx: number, dy: number) => {
     const {
@@ -107,6 +105,7 @@ export class Sprite {
 
   animate = () => {
     this.displace({ x: 0, y: GRAVITY });
+
     this.velocity.x *= FRICTION_CONSTANT;
     // this.velocity.y *= FRICTION_CONSTANT;
   };

@@ -16,7 +16,9 @@ jobs:
         git config --global user.name "unxok[bot]"
 
     - name: Build
-      run: npm run build
+      run: |
+        npm install
+        npm run build
 
     - name: Commit and Push dist to gh-pages
       run: |

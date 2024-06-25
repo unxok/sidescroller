@@ -6,7 +6,7 @@ import {
   Side,
   calculateVelocityAfterCollision,
 } from "../../../utils";
-import { FRICTION_CONSTANT, GRAVITY } from "../../constants";
+import { GRAVITY } from "../../constants";
 
 /**
  * abstract `draw(): void`

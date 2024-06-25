@@ -1,4 +1,4 @@
-import { Side, XY, assert } from "../utils";
+import { LRTB, Side, WH, XY, assert } from "../utils";
 import { Sprite } from "./classes/Sprite";
 import { FPS } from "./classes/FPS";
 import {
@@ -9,6 +9,7 @@ import {
 } from "./constants";
 import { Player } from "./classes/Player";
 import { Entity } from "./classes/Entity";
+import { Platform } from "./classes/Box";
 
 export const getCtx = () => {
   const c = document.getElementById(GAME_CANVAS_ID) as HTMLCanvasElement | null;
@@ -144,47 +145,155 @@ const checkAndFixCollision: (sprite: Sprite, entity: Entity) => void = (
   // return checkAndFixCollision(sprite, entity);
 };
 
+// export const game = () => {
+//   const ctx = getCtx();
+
+//   const fps = new FPS();
+//   const player = new Player({ x: 25, y: 500 }, { w: 50, h: 80 }, "green");
+//   const enemy = new Sprite({ x: 400, y: 500 }, { w: 50, h: 50 }, "red");
+
+//   const platform = new Entity(
+//     { x: 25, y: DEFAULT_CANVAS_HEIGHT - 160 },
+//     { w: 500, h: 50 },
+//     "black",
+//   );
+
+//   const platform2 = new Entity({ x: 700, y: 300 }, { w: 200, h: 250 }, "black");
+//   //   const player = new Player(25, DEFAULT_CANVAS_HEIGHT - 50, 50, 50, "green");
+
+//   const entities = [player, platform, platform2];
+
+//   entities.forEach((e) => e.draw());
+
+//   const doTick = async () => {
+//     ctx.clearRect(0, 0, DEFAULT_CANVAS_WIDTH, DEFAULT_CANVAS_HEIGHT);
+
+//     // entities.forEach((e1, i1) => {
+//     //   entities.forEach((e2, i2) => {
+//     //     if (i2 === i1) return;
+//     //     checkAndFixCollision(e1, e2);
+
+//     //   })
+//     // })
+
+//     entities.forEach((e, i) => {
+//       if (i === 0) return;
+//       checkAndFixCollision(player, e);
+//       player.animate();
+//       e.animate();
+//       // player.animate();
+//       // player.updatePosition(offset.x, offset.y);
+//       // player.animate();
+//     });
+//     // checkCollision(enemy, player);
+//     fps.animate();
+
+//     // await new Promise<void>((res) => setTimeout(() => res(), 240));
+//     requestAnimationFrame(doTick);
+//   };
+
+//   requestAnimationFrame(async () => await doTick());
+// };
+
+////////////////////////////////////
+
 export const game = () => {
   const ctx = getCtx();
-  const fps = new FPS();
-  const player = new Player({ x: 25, y: 500 }, { w: 50, h: 80 }, "green");
-  const enemy = new Sprite(
-    { x: 400, y: DEFAULT_CANVAS_HEIGHT - 50 },
+
+  const player = new Player(
+    "green",
+    { x: 50, y: 100 },
+    { x: 50, y: 50 },
     { w: 50, h: 50 },
-    "red",
+    50,
+    { x: 0, y: 0 },
+    { x: 8, y: 10 },
+    { x: 0, y: 0 },
+    true,
+    false,
+    true,
   );
 
-  const platform = new Entity(
-    { x: 25, y: DEFAULT_CANVAS_HEIGHT - 160 },
-    { w: 500, h: 50 },
+  const enemy = new Entity(
+    "green",
+    { x: 50, y: 100 },
+    { x: 400, y: 50 },
+    { w: 50, h: 50 },
+    500,
+    { x: 0, y: 0 },
+    { x: 8, y: 10 },
+    { x: 0, y: 0 },
+    true,
+    false,
+    true,
+  );
+
+  const platform1 = new Platform(
+    "gray",
+    { x: 200, y: 0 },
+    { w: 50, h: 400 },
+    500,
+    { x: 0, y: 0 },
+    { x: 100, y: 100 },
+    { x: 0, y: 0 },
+    true,
+    true,
+    false,
+  );
+
+  const platform2 = new Platform(
     "black",
+    { x: 50, y: 500 },
+    { w: 800, h: 50 },
+    500,
+    { x: 0, y: 0 },
+    { x: 0, y: 0 },
+    { x: 0, y: 0 },
+    true,
+    true,
+    false,
   );
 
-  const platform2 = new Entity({ x: 700, y: 300 }, { w: 200, h: 500 }, "black");
-  //   const player = new Player(25, DEFAULT_CANVAS_HEIGHT - 50, 50, 50, "green");
+  const objects = [player, platform1, platform2, enemy];
 
-  const entities = [player, platform, platform2];
+  let handle = 0;
 
-  entities.forEach((e) => e.draw());
-
-  const doTick = async () => {
+  const doTick = () => {
     ctx.clearRect(0, 0, DEFAULT_CANVAS_WIDTH, DEFAULT_CANVAS_HEIGHT);
-
-    entities.forEach((e, i) => {
-      if (i === 0) return;
-      checkAndFixCollision(player, e);
-      player.animate();
-      e.animate();
-      // player.animate();
-      // player.updatePosition(offset.x, offset.y);
-      // player.animate();
+    objects.forEach((o1, i1) => {
+      objects.forEach((o2, i2) => {
+        if (i1 === i2) return;
+        const isCollision = o1.checkCollision(o2);
+        if (!isCollision) return;
+        o1.fixCollision(o2);
+      });
+      o1.animate();
     });
-    // checkCollision(enemy, player);
-    fps.animate();
 
-    // await new Promise<void>((res) => setTimeout(() => res(), 240));
-    requestAnimationFrame(doTick);
+    handle = requestAnimationFrame(doTick);
   };
 
-  requestAnimationFrame(async () => await doTick());
+  let isPaused = false;
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      if (isPaused) {
+        console.log("unpaused");
+        isPaused = false;
+        ctx.clearRect(10, 10, 50, 50);
+        doTick();
+        return;
+      }
+      console.log("paused");
+      cancelAnimationFrame(handle);
+      ctx.fillText("Paused", 10, 10, 50);
+      isPaused = true;
+    }
+    if (e.key === "f") {
+      doTick();
+      ctx.fillText("Paused", 10, 10, 50);
+      cancelAnimationFrame(handle);
+    }
+  });
+
+  doTick();
 };

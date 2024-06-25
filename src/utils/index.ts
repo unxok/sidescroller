@@ -3,6 +3,7 @@ export const assert = <T>(a: unknown) => a as T;
 export type XY = { x: number; y: number };
 export type WH = { w: number; h: number };
 export type Side = "left" | "right" | "top" | "bottom";
+export type LRTB = Record<Side, number>;
 
 /**
  * Checks if a number is 'close' to another number
@@ -24,4 +25,15 @@ export const isCloseNumber = (
   closeness: number,
 ) => {
   return checkNum + closeness <= targetNum && checkNum - closeness >= targetNum;
+};
+
+export const calculateVelocityAfterCollision: (
+  m1: number,
+  m2: number,
+  v1: XY,
+  v2: XY,
+) => XY = (m1, m2, v1, v2) => {
+  const vx = (v1.x * (m1 - m2) + 2 * (m2 * v2.x)) / (m1 + m2);
+  const vy = (v1.y * (m1 - m2) + 2 * (m2 * v2.y)) / (m1 + m2);
+  return { x: vx, y: vy };
 };

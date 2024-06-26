@@ -1,44 +1,51 @@
-import { useState } from "react";
+import { createContext, useEffect, useState } from "react";
 import "./App.css";
-import {
-  DEFAULT_CANVAS_HEIGHT,
-  DEFAULT_CANVAS_WIDTH,
-  GAME_CANVAS_ID,
-} from "./game/constants";
-import { game } from "./game";
+import { Position } from "./components/Position";
+import { Velocity } from "./components/Velocity";
+export const CANVAS_WIDTH = 450;
+export const CANVAS_HEIGHT = 450;
+
+export const ViewportContext = createContext({ width: 0, height: 0 });
 
 function App() {
-  const [gameStarted, setGameStarted] = useState(false);
+  const [viewport, setViewport] = useState({
+    width: window.screen.width,
+    height: window.screen.height,
+  });
+
+  const updateViewport = () => {
+    const width = window.screen.width;
+    const height = window.screen.height;
+    setViewport({ width, height });
+  };
+
+  useEffect(() => {
+    window.addEventListener("resize", updateViewport);
+    return () => {
+      window.removeEventListener("resize", updateViewport);
+    };
+  }, []);
 
   return (
-    <main className="fixed inset-0 flex flex-col items-center justify-center bg-gray-800 p-2 text-slate-400">
-      <h1 className="text-3xl font-bold tracking-wide">sidescroller</h1>
-      {!gameStarted && (
-        <div className="absolute left-1/2 top-1/2 z-50 flex h-3/4 w-3/4 -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center gap-3 border bg-slate-600">
-          <h2 className="text-4xl font-bold tracking-wide">Welcome!</h2>
+    <main className="dark fixed inset-0 flex flex-col items-center justify-start overflow-y-auto">
+      <header className="flex w-full max-w-[100vw] items-center justify-start bg-secondary p-5">
+        unxok.com
+      </header>
+      <br />
+      <ViewportContext.Provider value={viewport}>
+        <article className="md:prose-md prose-sm max-w-[90vw] text-start dark:prose-invert lg:prose-lg xl:prose-xl [&_code]:rounded-sm [&_code]:bg-secondary [&_code]:px-1 [&_code]:py-[.125rem]">
+          <h2 className="tracking-wide] text-3xl font-bold">
+            A Dive into 2D game physics
+          </h2>
           <p>
-            This is a little sidescroller I made to have fun with figuring out
-            how to code physics
+            This blog aims to examine implentation details of physics inside a
+            2D javascript game.
           </p>
-          <button
-            onClick={() => {
-              setGameStarted(true);
-              setTimeout(() => game(), 0);
-            }}
-            className="rounded-md bg-blue-700 p-3 text-slate-300"
-          >
-            Start game
-          </button>
-        </div>
-      )}
-      {gameStarted && (
-        <canvas
-          width={DEFAULT_CANVAS_WIDTH}
-          height={DEFAULT_CANVAS_HEIGHT}
-          className="rounded-md border bg-slate-300"
-          id={GAME_CANVAS_ID}
-        ></canvas>
-      )}
+          <Position />
+          <Velocity />
+        </article>
+      </ViewportContext.Provider>
+      {/* <Sidescroller /> */}
     </main>
   );
 }

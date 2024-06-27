@@ -37,3 +37,26 @@ export const calculateVelocityAfterCollision: (
   const vy = (v1.y * (m1 - m2) + 2 * (m2 * v2.y)) / (m1 + m2);
   return { x: vx, y: vy };
 };
+
+/**
+ * Improved version of `Number()` that will convert something to a non-NaN number
+ * @param val Any value
+ * @param defaultNumber What to convert to if not a number (0 by default)
+ * @param invalidValCheck An expression to call on val. If true, `defaultNumber` will be returned
+ * @returns A non-NaN number
+ */
+export const toNumber = (
+  val: any,
+  defaultNumber?: number,
+  invalidValCheck?: (val: any) => boolean,
+) => {
+  if (invalidValCheck !== null && invalidValCheck !== undefined) {
+    const bool = invalidValCheck(val);
+    if (bool) return defaultNumber ?? 0;
+  }
+  const num = Number(val);
+  if (Number.isNaN(num)) {
+    return defaultNumber ?? 0;
+  }
+  return num;
+};

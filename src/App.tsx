@@ -1,39 +1,43 @@
-import { createContext, useEffect, useState } from "react";
+import { createContext, useEffect, useRef, useState } from "react";
 import "./App.css";
 import { Position } from "./components/Position";
 import { Velocity } from "./components/Velocity";
+import { Acceleration } from "./components/Acceleration";
+import { Force } from "./components/Force";
 export const CANVAS_WIDTH = 450;
 export const CANVAS_HEIGHT = 450;
 
-export const ViewportContext = createContext({ width: 0, height: 0 });
+export const ArticleWidthContext = createContext(0);
 
 function App() {
-  const [viewport, setViewport] = useState({
-    width: window.screen.width,
-    height: window.screen.height,
-  });
+  const [articleWidth, setArticleWidth] = useState(0);
+  const articleRef = useRef<HTMLElement>(null);
 
-  const updateViewport = () => {
-    const width = window.screen.width;
-    const height = window.screen.height;
-    setViewport({ width, height });
+  const updateArticle = () => {
+    if (!articleRef.current) return;
+    const { clientWidth } = articleRef.current;
+    setArticleWidth(clientWidth);
   };
 
   useEffect(() => {
-    window.addEventListener("resize", updateViewport);
+    updateArticle();
+    window.addEventListener("resize", updateArticle);
     return () => {
-      window.removeEventListener("resize", updateViewport);
+      window.removeEventListener("resize", updateArticle);
     };
   }, []);
 
   return (
     <main className="dark fixed inset-0 flex flex-col items-center justify-start overflow-y-auto">
-      <header className="flex w-full max-w-[100vw] items-center justify-start bg-secondary p-5">
+      <header className="flex w-full items-center justify-start bg-secondary p-5">
         unxok.com
       </header>
       <br />
-      <ViewportContext.Provider value={viewport}>
-        <article className="md:prose-md prose-sm max-w-[90vw] text-start dark:prose-invert lg:prose-lg xl:prose-xl [&_code]:rounded-sm [&_code]:bg-secondary [&_code]:px-1 [&_code]:py-[.125rem]">
+      <ArticleWidthContext.Provider value={articleWidth}>
+        <article
+          ref={articleRef}
+          className="md:prose-md prose-sm max-w-[70ch] px-3 text-start dark:prose-invert lg:prose-lg xl:prose-xl [&_*:not(pre)_code]:rounded-sm [&_*:not(pre)_code]:bg-secondary [&_*:not(pre)_code]:px-1 [&_*:not(pre)_code]:py-[.125rem]"
+        >
           <h2 className="tracking-wide] text-3xl font-bold">
             A Dive into 2D game physics
           </h2>
@@ -43,8 +47,10 @@ function App() {
           </p>
           <Position />
           <Velocity />
+          <Acceleration />
+          <Force />
         </article>
-      </ViewportContext.Provider>
+      </ArticleWidthContext.Provider>
       {/* <Sidescroller /> */}
     </main>
   );

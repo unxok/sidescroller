@@ -1,5 +1,5 @@
 import { useContext, useEffect, useRef, useState } from "react";
-import { ViewportContext } from "../../App";
+import { ArticleWidthContext } from "../../App";
 import { Canvas } from "../Canvas";
 import { Slider } from "../ui/slider";
 import { Label } from "../ui/label";
@@ -8,9 +8,10 @@ import { PauseIcon, PlayIcon } from "@radix-ui/react-icons";
 
 export const Position = () => {
   const ref = useRef<HTMLCanvasElement>(null);
-  const viewport = useContext(ViewportContext);
-  const width = viewport.width * 0.75;
-  const height = viewport.height * 0.5;
+  const articleWidth = useContext(ArticleWidthContext);
+  const width = articleWidth * 0.75;
+  // const height = article.height * 0.5;
+  const height = 300;
 
   const bodyWidth = 50;
   const bodyHeight = 50;
@@ -22,12 +23,12 @@ export const Position = () => {
   useEffect(() => {
     if (!ref?.current) return;
     render(ref.current);
-  }, [viewport, coords]);
+  }, [articleWidth, coords]);
 
   const render = (canvas: HTMLCanvasElement) => {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    ctx.clearRect(0, 0, viewport.width, viewport.height);
+    ctx.clearRect(0, 0, articleWidth, height);
     ctx.fillStyle = "green";
     ctx.fillRect(coords.x, coords.y, bodyWidth, bodyHeight);
   };

@@ -1,68 +1,68 @@
 import { useContext, useEffect, useRef, useState } from "react";
-import { ViewportContext } from "../../App";
+import { ArticleWidthContext } from "../../App";
 import { Canvas } from "../Canvas";
 import { Slider } from "../ui/slider";
 import { Label } from "../ui/label";
 import { WH, XY } from "@/utils";
+import SyntaxHighlighter from "react-syntax-highlighter";
+import highlightStyle from "react-syntax-highlighter/dist/esm/styles/hljs/atom-one-dark-reasonable";
 
 export const Velocity = () => {
-  const ref = useRef<HTMLCanvasElement>(null);
-  const viewport = useContext(ViewportContext);
-  const width = viewport.width * 0.75;
-  const height = viewport.height * 0.5;
+  const articleWidth = useContext(ArticleWidthContext);
+  const width = articleWidth * 0.75;
+  // const height = article.height * 0.5;
+  const height = 300;
+  const ref = useRef(
+    // this doesn't matter it's just for initialization
+    new Body(
+      { x: 50, y: 50 },
+      { x: width, y: height },
+      // except velocity should match what's created later
+      // because this is used to initialize the slider default values
+      { x: 1, y: 1 },
+      undefined,
+    ),
+  );
 
-  const [velocity, setVelocity] = useState({ x: 2, y: 4 });
+  const setVelocity = (cb: (prev: XY) => XY) => {
+    const { x, y } = cb({
+      x: ref.current.velocity.x,
+      y: ref.current.velocity.y,
+    });
+    ref.current.velocity = { x, y };
+  };
 
   // console.log("viewport: ", viewport);
-
-  useEffect(() => {
-    if (!ref?.current) return;
-    render(ref.current);
-  }, [viewport, velocity]);
-
-  const render = (canvas: HTMLCanvasElement) => {
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.clearRect(0, 0, viewport.width, viewport.height);
-    // ctx.fillStyle = "green";
-    // ctx.fillRect(coords.x, coords.y, bodyWidth, bodyHeight);
-    const box = new Body(
-      { x: 10, y: 10 },
-      { x: width, y: height },
-      { x: velocity.x, y: velocity.y },
-      ctx,
-    );
-
-    const animate = () => {
-      ctx.clearRect(0, 0, width, height);
-      box.animate();
-      requestAnimationFrame(animate);
-    };
-
-    requestAnimationFrame(animate);
-  };
 
   return (
     <>
       <h3>Velocity</h3>
       <p>
-        Adjusting the position directly <i>technically</i> works to mimic
-        velocity. However, it can look pretty choppy.
+        Velocity is the number of pixels per frame the position of an entity
+        changes. Here's an outline of what the <code>Body</code> class looks
+        like
       </p>
-      <p>
-        Ideally each entity can have a velocity that defines how its position
-        changes every frame of animation. This will be affected by things like
-        force and acceleration once we wire those up, but for now you can adjust
-        manually with the sliders.
-      </p>
+      <SyntaxHighlighter language="typescript" style={highlightStyle}>
+        {markdown}
+      </SyntaxHighlighter>
       <p>
         No play buttons from this point on unfortunately due to the complexity
         of phsyics (even at this level so far). If there <i>were</i> play
         buttons though, they would effectively give the entity{" "}
-        <i>acceleration</i>
+        <i>acceleration</i>. In fact, if you were to drag the slider forward at{" "}
+        <i>1 pixel per frame</i>, then the box effectively has an acceleration
+        of <code>1 px/frame</code>
+      </p>
+      <p>
+        I made it so that if the box goes <i>out of bounds</i>, then it will
+        stop at the wall but its velocity will remain unchanged. This is so you
+        can better see what it means to have a <i>negative</i> velocity
       </p>
       <br />
-      <Controls velocity={velocity} setVelocity={setVelocity} />
+      <Controls
+        velocity={{ x: ref.current.velocity.x, y: ref.current.velocity.y }}
+        setVelocity={setVelocity}
+      />
       {/* <p>
         X = pixels moved <i>horizontally</i> per frame
       </p>
@@ -72,7 +72,29 @@ export const Velocity = () => {
       <br />
       <Canvas
         id="bodies"
-        ref={ref}
+        // ref={ref}
+        ref={(canvas) => {
+          if (!canvas) return;
+          console.log("canvas rendered");
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return;
+
+          const box = new Body(
+            { x: 10, y: 10 },
+            { x: width, y: height },
+            { x: 1, y: 1 },
+            ctx,
+          );
+          ref.current = box;
+
+          const animate = () => {
+            ctx.clearRect(0, 0, width, height);
+            box.animate();
+            requestAnimationFrame(animate);
+          };
+
+          requestAnimationFrame(animate);
+        }}
         width={width}
         height={height}
         className="rounded-xl border bg-background"
@@ -86,15 +108,16 @@ const Controls = ({
   setVelocity,
 }: {
   velocity: { x: number; y: number };
-  setVelocity: React.Dispatch<
-    React.SetStateAction<{
-      x: number;
-      y: number;
-    }>
-  >;
+  setVelocity: (cb: (prev: XY) => XY) => void;
 }) => {
   const xMax = 20;
   const yMax = 20;
+
+  const [statefulVelociy, setStatefulVelocity] = useState(velocity);
+
+  useEffect(() => {
+    setVelocity(() => statefulVelociy);
+  }, [statefulVelociy]);
 
   return (
     <div className="flex flex-col gap-10">
@@ -105,13 +128,13 @@ const Controls = ({
         <Slider
           id="horizontal-velocity"
           name="horizontal-velocity"
-          thumbLabel={"pixels per second"}
+          thumbLabel={`pixels per second`}
           className="w-3/4"
-          min={0}
+          min={-xMax}
           max={xMax}
-          value={[velocity.x]}
+          value={[statefulVelociy.x]}
           onValueChange={(arr) =>
-            setVelocity((prev) => ({ x: arr[0] ?? 0, y: prev.y }))
+            setStatefulVelocity((prev) => ({ x: arr[0] ?? 0, y: prev.y }))
           }
         />
       </div>
@@ -124,17 +147,45 @@ const Controls = ({
           name="vertical-velocity"
           thumbLabel={"pixels per second"}
           className="w-3/4"
-          min={0}
+          min={-yMax}
           max={yMax}
-          value={[velocity.y]}
+          value={[statefulVelociy.y]}
           onValueChange={(arr) =>
-            setVelocity((prev) => ({ x: prev.x, y: arr[0] ?? 0 }))
+            setStatefulVelocity((prev) => ({ x: prev.x, y: arr[0] ?? 0 }))
           }
         />
       </div>
     </div>
   );
 };
+
+const markdown = `
+class Body {
+  constructor(
+    protected position: XY,
+    protected volume: WL,
+    public velocity: XY,
+    // ...other stuff
+  ) {}
+
+  draw(): void {
+    // fill a rect based on position and volume
+  }
+
+  affectPositionByVelocity(): void {
+    // copy the current position and adjust by current velocity
+    // if not out of bounds, update position
+    // otherwise adjust appropiately since it's out of bounds
+  }
+
+  // called every frame of animation
+  animate(): void {
+    this.draw();
+    this.affectPositionByVelocity();
+  }
+}
+
+`;
 
 // velocity and position only
 class Body {
@@ -143,11 +194,12 @@ class Body {
     protected position: XY,
     protected maxPosition: XY,
     // pixels per frame
-    protected velocity: XY,
-    private ctx: CanvasRenderingContext2D,
+    public velocity: XY,
+    public ctx?: CanvasRenderingContext2D,
   ) {}
 
   draw(): void {
+    if (!this.ctx) return;
     const {
       position: { x, y },
       volume: { w, h },
@@ -173,19 +225,19 @@ class Body {
     }
     if (underMinX) {
       this.position.x = 0;
-      this.velocity.x = Math.abs(this.velocity.x);
+      // this.velocity.x = Math.abs(this.velocity.x);
     }
     if (underMinY) {
       this.position.y = 0;
-      this.velocity.y = Math.abs(this.velocity.y);
+      // this.velocity.y = Math.abs(this.velocity.y);
     }
     if (overMaxX) {
       this.position.x = this.maxPosition.x - w;
-      this.velocity.x = -1 * Math.abs(this.velocity.x);
+      // this.velocity.x = -1 * Math.abs(this.velocity.x);
     }
     if (overMaxY) {
       this.position.y = this.maxPosition.y - h;
-      this.velocity.y = -1 * Math.abs(this.velocity.y);
+      // this.velocity.y = -1 * Math.abs(this.velocity.y);
     }
   }
 

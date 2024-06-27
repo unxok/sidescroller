@@ -1,13 +1,13 @@
 import { useContext, useEffect, useRef, useState } from "react";
-import { ArticleWidthContext } from "../../App";
-import { Canvas } from "../Canvas";
-import { Slider } from "../ui/slider";
-import { Label } from "../ui/label";
+import { Canvas } from "../../Canvas";
+import { Slider } from "../../ui/slider";
+import { Label } from "../../ui/label";
 import { WH, XY, toNumber } from "@/utils";
-import { Button } from "../ui/button";
+import { Button } from "../../ui/button";
 import SyntaxHighlighter from "react-syntax-highlighter";
 import highlightStyle from "react-syntax-highlighter/dist/esm/styles/hljs/atom-one-dark-reasonable";
-import { Input } from "../ui/input";
+import { Input } from "../../ui/input";
+import { ArticleWidthContext } from "..";
 
 export const Force = () => {
   const [_, resetCanvas] = useState(0);

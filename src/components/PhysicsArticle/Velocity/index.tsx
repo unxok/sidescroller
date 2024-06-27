@@ -1,11 +1,12 @@
 import { useContext, useEffect, useRef, useState } from "react";
-import { ArticleWidthContext } from "../../App";
-import { Canvas } from "../Canvas";
-import { Slider } from "../ui/slider";
-import { Label } from "../ui/label";
+
+import { Canvas } from "../../Canvas";
+import { Slider } from "../../ui/slider";
+import { Label } from "../../ui/label";
 import { WH, XY } from "@/utils";
 import SyntaxHighlighter from "react-syntax-highlighter";
 import highlightStyle from "react-syntax-highlighter/dist/esm/styles/hljs/atom-one-dark-reasonable";
+import { ArticleWidthContext } from "..";
 
 export const Velocity = () => {
   const articleWidth = useContext(ArticleWidthContext);

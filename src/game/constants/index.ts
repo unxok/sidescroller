@@ -9,3 +9,4 @@ export const VERTICAL_MOVEMENT_UNIT = 10000;
 export const DENSITY_CONSTANT = 1;
 export const FRICTION_CONSTANT = 0.5;
 export const TIME_CONSTANT = 1;
+export const BOUNCE_DAMPENING = 0.5;

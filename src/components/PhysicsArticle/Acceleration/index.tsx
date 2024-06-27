@@ -1,8 +1,8 @@
 import { useContext, useRef, useState } from "react";
-import { ArticleWidthContext } from "../../App";
-import { Canvas } from "../Canvas";
+import { ArticleWidthContext } from "@/components/PhysicsArticle";
+import { Canvas } from "@/components/Canvas";
 import { WH, XY } from "@/utils";
-import { Button } from "../ui/button";
+import { Button } from "@/components/ui/button";
 
 export const Acceleration = () => {
   const [_, setCounter] = useState(0);

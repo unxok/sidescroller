@@ -1,10 +1,10 @@
 import { useContext, useEffect, useRef, useState } from "react";
-import { ArticleWidthContext } from "../../App";
-import { Canvas } from "../Canvas";
-import { Slider } from "../ui/slider";
-import { Label } from "../ui/label";
-import { Button } from "../ui/button";
+import { Canvas } from "../../Canvas";
+import { Slider } from "../../ui/slider";
+import { Label } from "../../ui/label";
+import { Button } from "../../ui/button";
 import { PauseIcon, PlayIcon } from "@radix-ui/react-icons";
+import { ArticleWidthContext } from "..";
 
 export const Position = () => {
   const ref = useRef<HTMLCanvasElement>(null);

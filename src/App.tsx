@@ -1,59 +1,119 @@
-import { createContext, useEffect, useRef, useState } from "react";
 import "./App.css";
-import { Position } from "./components/Position";
-import { Velocity } from "./components/Velocity";
-import { Acceleration } from "./components/Acceleration";
-import { Force } from "./components/Force";
+import { PhysicsArticle } from "@/components/PhysicsArticle";
+import { Sidescroller } from "@/components/Sidescroller";
+import { buttonVariants } from "@/components/ui/button";
+import { HTMLAttributes, ReactNode } from "react";
+import { Sandbox } from "@/components/Sandbox";
 export const CANVAS_WIDTH = 450;
 export const CANVAS_HEIGHT = 450;
 
-export const ArticleWidthContext = createContext(0);
+const BASE_PATHNAME = "/sidescroller";
+const routes = {
+  "/": <Home />,
+  "/A_Dive_into_2D_game_physics": <PhysicsArticle />,
+  "/game": <Sidescroller />,
+  "/sandbox": <Sandbox />,
+};
 
-function App() {
-  const [articleWidth, setArticleWidth] = useState(0);
-  const articleRef = useRef<HTMLElement>(null);
-
-  const updateArticle = () => {
-    if (!articleRef.current) return;
-    const { clientWidth } = articleRef.current;
-    setArticleWidth(clientWidth);
-  };
-
-  useEffect(() => {
-    updateArticle();
-    window.addEventListener("resize", updateArticle);
-    return () => {
-      window.removeEventListener("resize", updateArticle);
-    };
-  }, []);
+const App = () => {
+  // dumb router for now
 
   return (
     <main className="dark fixed inset-0 flex flex-col items-center justify-start overflow-y-auto">
-      <header className="flex w-full items-center justify-start bg-secondary p-5">
-        unxok.com
+      <header className="flex w-full items-center justify-start gap-4 bg-secondary p-5">
+        <span>unxok.com</span>
+        <Link href={"/"} className={buttonVariants({ variant: "link" })}>
+          Home
+        </Link>
+        <Link
+          href={"/A_Dive_into_2D_game_physics"}
+          className={buttonVariants({ variant: "link" })}
+        >
+          Article
+        </Link>
+        <Link href={"/game"} className={buttonVariants({ variant: "link" })}>
+          Game
+        </Link>
+        <Link href={"/sandbox"} className={buttonVariants({ variant: "link" })}>
+          Sandbox
+        </Link>
       </header>
       <br />
-      <ArticleWidthContext.Provider value={articleWidth}>
-        <article
-          ref={articleRef}
-          className="md:prose-md prose-sm max-w-[70ch] px-3 text-start dark:prose-invert lg:prose-lg xl:prose-xl [&_*:not(pre)_code]:rounded-sm [&_*:not(pre)_code]:bg-secondary [&_*:not(pre)_code]:px-1 [&_*:not(pre)_code]:py-[.125rem]"
-        >
-          <h2 className="tracking-wide] text-3xl font-bold">
-            A Dive into 2D game physics
-          </h2>
-          <p>
-            This blog aims to examine implentation details of physics inside a
-            2D javascript game.
-          </p>
-          <Position />
-          <Velocity />
-          <Acceleration />
-          <Force />
-        </article>
-      </ArticleWidthContext.Provider>
+      <Outlet routes={routes} />
+      {/* <Home /> */}
+      {/* <PhysicsArticle /> */}
       {/* <Sidescroller /> */}
     </main>
   );
-}
+};
 
 export default App;
+
+function Home() {
+  //
+  return (
+    <div>
+      <div>Welcome home!</div>
+    </div>
+  );
+}
+
+const createRouter = (
+  routes: Record<string, JSX.Element>,
+  basePathname?: string,
+) => {
+  type RoutePath = keyof typeof routes;
+  type Router = {
+    currentRoute: RoutePath | "/" | "/404";
+    push: (route: RoutePath) => void;
+  };
+  const router: Router = {
+    currentRoute: "/",
+    push: (route) => {
+      const isValid = Object.keys(routes).includes(route);
+      const r = isValid ? route : "/404";
+      history.pushState({}, "", basePathname ?? "" + r);
+      return { ...router, currentRoute: r };
+    },
+  };
+
+  return router;
+};
+
+// const router = createRouter(routes, BASE_PATHNAME)
+
+type RoutePath = keyof typeof routes;
+
+const Outlet = ({ routes }: { routes: Record<string, JSX.Element> }) => {
+  const pathname = window.location.pathname;
+  const route = pathname.replace(BASE_PATHNAME, "");
+  const currentRoute = Object.keys(routes).includes(route) ? route : "/404";
+
+  history.pushState({}, "", BASE_PATHNAME + currentRoute);
+
+  return routes[currentRoute];
+};
+
+const Link = ({
+  href,
+  children,
+  onClick,
+  ...props
+}: Omit<HTMLAttributes<HTMLAnchorElement>, "href"> & {
+  children: ReactNode;
+  href: RoutePath;
+}) => {
+  return (
+    <a
+      href={BASE_PATHNAME + href}
+      // onClick={(e) => {
+      //   e.preventDefault();
+      //   history.pushState(undefined, "", BASE_PATHNAME + href);
+      //   if (onClick) onClick(e);
+      // }}
+      {...props}
+    >
+      {children}
+    </a>
+  );
+};

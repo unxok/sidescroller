@@ -60,3 +60,17 @@ export const toNumber = (
   }
   return num;
 };
+
+export const getRandomInt = (min: number, max: number) => {
+  min = Math.ceil(min);
+  max = Math.floor(max);
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+};
+
+export const getRandomHexStr = (len: number) => {
+  let output = "";
+  for (let i = 0; i < len; ++i) {
+    output += Math.floor(Math.random() * 16).toString(16);
+  }
+  return output;
+};

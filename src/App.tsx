@@ -3,7 +3,7 @@ import { PhysicsArticle } from "@/components/PhysicsArticle";
 import { Sidescroller } from "@/components/Sidescroller";
 import { buttonVariants } from "@/components/ui/button";
 import { HTMLAttributes, ReactNode } from "react";
-import { Sandbox } from "@/components/Sandbox";
+import { Sandbox } from "./components/Sandbox";
 export const CANVAS_WIDTH = 450;
 export const CANVAS_HEIGHT = 450;
 

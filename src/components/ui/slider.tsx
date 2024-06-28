@@ -28,6 +28,7 @@ const Slider = React.forwardRef<
         </div>
       )}
     </SliderPrimitive.Thumb>
+    {props.children}
   </SliderPrimitive.Root>
 ));
 Slider.displayName = SliderPrimitive.Root.displayName;

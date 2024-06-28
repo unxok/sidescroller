@@ -1,58 +1,318 @@
 import { BOUNCE_DAMPENING, GRAVITY, TIME_CONSTANT } from "@/game/constants";
-import { WH, XY, assert } from "@/utils";
+import {
+  LRTB,
+  WH,
+  XY,
+  assert,
+  getRandomHexStr,
+  getRandomInt,
+  toNumber,
+} from "@/utils";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Game } from "./Game";
+import { PauseIcon, PlayIcon, ReloadIcon } from "@radix-ui/react-icons";
+import { Slider } from "@/components/ui/slider";
+import { Label } from "@/components/ui/label";
+import { Input } from "../ui/input";
 
-const CANVAS_ID = "sandbox";
+export const CANVAS_ID = "sandbox";
 
-const pauseTrue = new CustomEvent("pauseChanged", {
-  detail: {
-    paused: true,
-  },
-});
-const pauseFalse = new CustomEvent("pauseChanged", {
-  detail: {
-    paused: false,
-  },
-});
-type PauseChangedEvent = typeof pauseTrue | typeof pauseFalse;
-
-const stepFrame = new CustomEvent("stepFrame");
+const generateBoxes = (volume: WH, maxPosition: XY, count: number) => {
+  const arr = [];
+  for (let i = 0; i < count; i++) {
+    const fill = "#" + getRandomHexStr(6);
+    const xMax = maxPosition.x - volume.w;
+    const yMax = maxPosition.y - volume.h;
+    const px = getRandomInt(0, xMax);
+    const py = getRandomInt(0, yMax);
+    const vx = getRandomInt(1, 10) * (getRandomInt(0, 1) > 0 ? -1 : 1);
+    const vy = getRandomInt(1, 10) * (getRandomInt(0, 1) > 0 ? -1 : 1);
+    arr.push(
+      new Box({
+        fill: fill,
+        mass: 60,
+        volume: { ...volume },
+        position: { x: px, y: py },
+        velocity: { x: vx, y: vy },
+        acceleration: { x: 0, y: 0 },
+        bouncy: true,
+        minPosition: { x: 0, y: 0 },
+        maxPosition: { x: xMax, y: yMax },
+      }),
+    );
+  }
+  return arr;
+};
 
 export const Sandbox = () => {
-  const [reset, resetCanvas] = useState(0);
-  const ref = useRef<HTMLCanvasElement>(null);
+  const [game, setGame] = useState<Game>();
+  const [randomDetails, setRandomDetails] = useState({
+    count: 0,
+    size: 50,
+  });
+  const isPaused = useRef(false);
+  // this is soley used for button text
+  // we can't have `isPaused` be stateful since that'd be updated async by react
+  const [pauseState, setPauseState] = useState(false);
+  const DEFAULT_GRAVITY = 2;
+  const DEFAULT_BOUNCE_DAMPENING = 0.7;
 
   const togglePaused = () => {
-    if (!ref?.current) return;
-    const paused = ref.current.getAttribute("data-paused") === "true";
-    ref.current.setAttribute("data-paused", (!paused).toString());
-    if (paused) {
-      return window.dispatchEvent(pauseFalse);
+    if (isPaused.current) {
+      isPaused.current = false;
+      setPauseState(false);
+      requestAnimationFrame(animate);
+      return;
     }
-    window.dispatchEvent(pauseTrue);
+    isPaused.current = true;
+    setPauseState(true);
+  };
+
+  const setupGame = (reset?: boolean) => {
+    if (game && !reset) return;
+    const bodies = [
+      new Player({
+        fill: "green",
+        strength: { x: 5, y: 50 },
+        mass: 50,
+        volume: { w: 50, h: 50 },
+        position: { x: 50, y: 50 },
+        velocity: { x: 0, y: 0 },
+        acceleration: { x: 0, y: 0 },
+        bouncy: true,
+        minPosition: { x: 0, y: 0 },
+        // maxPosition: { x: width, y: height },
+      }),
+      new Box({
+        fill: "red",
+        // strength: { x: 5, y: 200 },
+        mass: 50,
+        volume: { w: 50, h: 50 },
+        position: { x: 150, y: 50 },
+        velocity: { x: 0, y: 0 },
+        acceleration: { x: 0, y: 0 },
+        bouncy: true,
+        minPosition: { x: 0, y: 0 },
+        // maxPosition: { x: width, y: height },
+      }),
+      new Box({
+        fill: "orange",
+        // strength: { x: 5, y: 200 },
+        mass: 50,
+        volume: { w: 50, h: 50 },
+        position: { x: 200, y: 50 },
+        velocity: { x: 0, y: 0 },
+        acceleration: { x: 0, y: 0 },
+        bouncy: true,
+        minPosition: { x: 0, y: 0 },
+        // maxPosition: { x: width, y: height },
+      }),
+      new Box({
+        fill: "blue",
+        // strength: { x: 5, y: 200 },
+        mass: 50,
+        volume: { w: 50, h: 50 },
+        position: { x: 250, y: 50 },
+        velocity: { x: 0, y: 0 },
+        acceleration: { x: 0, y: 0 },
+        bouncy: true,
+        minPosition: { x: 0, y: 0 },
+        // maxPosition: { x: width, y: height },
+      }),
+      // ...generateBoxes({ w: 50, h: 50 }, { x: 400, y: 500 }, 10),
+    ];
+    const g = new Game(
+      DEFAULT_GRAVITY,
+      DEFAULT_BOUNCE_DAMPENING,
+      CANVAS_ID,
+      bodies,
+    );
+    setGame(g);
   };
 
   useEffect(() => {
-    // setTimeout(() => game(), 0);
-    game();
-  }, [reset]);
+    setupGame();
+  }, []);
+
+  const animate = () => {
+    if (!game) {
+      return console.log("no game found");
+    }
+    if (isPaused.current) {
+      return console.log("stopping for pause");
+    }
+    game.animate();
+    return requestAnimationFrame(animate);
+  };
+
+  useEffect(() => {
+    if (!game) return;
+    game.init();
+    animate();
+  }, [game]);
 
   return (
     <div className="w-[90vw]">
       <h1 className="text-4xl font-bold tracking-wide">Sandbox</h1>
       <br />
-      <canvas
-        ref={ref}
-        width={0}
-        height={0}
-        id={CANVAS_ID}
-        className="border"
-      />
+      <canvas width={0} height={0} id={CANVAS_ID} className="border" />
       <div className="flex flex-wrap items-center gap-4 py-3">
-        <Button onClick={() => togglePaused()}>pause</Button>
-        <Button onClick={() => window.dispatchEvent(stepFrame)}>step</Button>
-        <Button onClick={() => resetCanvas((prev) => prev + 1)}>reset</Button>
+        <Button onClick={() => togglePaused()}>
+          {pauseState ? <PlayIcon /> : <PauseIcon />}
+        </Button>
+        <Button
+          onClick={() => {
+            isPaused.current = true;
+            togglePaused();
+            setPauseState(true);
+            setTimeout(() => {
+              isPaused.current = true;
+            }, 0);
+            // isPaused = true;
+          }}
+        >
+          step
+        </Button>
+        <Button onClick={() => setupGame(true)}>
+          <ReloadIcon />
+        </Button>
+      </div>
+      <div className="flex flex-wrap items-center gap-4">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="bodies-count-input" className="text-xl">
+            Count
+          </Label>
+          <Input
+            // key={Math.random()}
+            name="bodies-count-input"
+            id="bodies-count-input"
+            value={randomDetails.count}
+            onChange={(e) => {
+              setRandomDetails((prev) => ({
+                ...prev,
+                count: toNumber(e.target.value),
+              }));
+            }}
+            className="w-24"
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="bodies-size-input" className="text-xl">
+            Size
+          </Label>
+          <Input
+            // key={Math.random()}
+            name="bodies-size-input"
+            id="bodies-size-input"
+            value={randomDetails.size}
+            onChange={(e) => {
+              setRandomDetails((prev) => ({
+                ...prev,
+                size: toNumber(e.target.value),
+              }));
+            }}
+            className="w-24"
+          />
+        </div>
+      </div>
+      <Button
+        className="my-3"
+        onClick={() => {
+          if (!game) return;
+          const canvas = document.getElementById(CANVAS_ID);
+          if (!canvas) return;
+          const x = toNumber(canvas.getAttribute("width"));
+          const y = toNumber(canvas.getAttribute("height"));
+          game.bodies = generateBoxes(
+            { w: randomDetails.size, h: randomDetails.size },
+            { x, y },
+            randomDetails.count,
+          );
+          game.init();
+        }}
+      >
+        generate
+      </Button>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="gravity-slider" className="text-xl">
+          Gravity
+        </Label>
+        <p className="text-muted-foreground">
+          Put positive to have gravity pull down, negative to pull up, and of
+          course zero to have no gravity.
+        </p>
+        <div className="flex items-center gap-2">
+          <span className="text-muted-foreground">-20</span>
+          <div className="flex w-3/4 flex-col">
+            <Slider
+              // makes it so it will rerender whenever game is first set
+              key={Math.random()}
+              name="gravity-slider"
+              id="gravity-slider"
+              min={-20}
+              max={20}
+              // thumbLabel
+              // can't use `value` prop because it's value isn't truly stateful
+              // since this is the only place to every change gravity, this should
+              // always be in sync anyway
+              defaultValue={[DEFAULT_GRAVITY]}
+              onValueChange={([num]) => {
+                if (!game) return;
+                game.gravity = num;
+              }}
+            >
+              {" "}
+              <span className="absolute bottom-[-1.75rem] left-1/2 -translate-x-1/2 text-muted-foreground">
+                0
+              </span>
+            </Slider>
+          </div>
+          <span className="text-muted-foreground">20</span>
+        </div>
+      </div>
+      <br />
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="gravity-slider" className="text-xl">
+          Bounce dampening
+        </Label>
+        <p className="text-muted-foreground">
+          A multiplier to affect the velocity of an object after it collides
+          with something (like the wall).{" "}
+        </p>
+        <ul className="list-disc pl-8 text-muted-foreground">
+          <li>0 → velocity becomes zero</li>
+          <li>.5 → velocity is cut in half</li>
+          <li>1 → velocity stays same</li>
+        </ul>
+        <div className="flex items-center gap-2">
+          <span className="text-muted-foreground">0</span>
+          <div className="flex w-3/4 flex-col">
+            <Slider
+              // makes it so it will rerender whenever game is first set
+              key={Math.random()}
+              name="gravity-slider"
+              id="gravity-slider"
+              min={0}
+              max={1}
+              step={0.1}
+              // thumbLabel
+              // can't use `value` prop because it's value isn't truly stateful
+              // since this is the only place to every change gravity, this should
+              // always be in sync anyway
+              defaultValue={[DEFAULT_BOUNCE_DAMPENING]}
+              onValueChange={([num]) => {
+                if (!game) return;
+                game.bounceDampening = num;
+              }}
+            >
+              <span className="absolute bottom-[-1.75rem] left-1/2 -translate-x-1/2 text-muted-foreground">
+                .5
+              </span>
+            </Slider>
+          </div>
+          <span className="text-muted-foreground">1</span>
+        </div>
       </div>
     </div>
   );
@@ -72,83 +332,105 @@ const getCtx = () => {
   return ctx;
 };
 
-const game = () => {
-  const canvas = document.getElementById(CANVAS_ID) as
-    | HTMLCanvasElement
-    | undefined;
-  if (!canvas) throw new Error("No canvas found");
-  const parent = canvas.parentElement;
-  if (!parent) throw new Error("No parent of canvas found");
-  const width = parent.clientWidth;
-  const height = 450;
-  canvas.setAttribute("width", width.toString());
-  canvas.setAttribute("height", height.toString());
+// const game = () => {
+//   const bodies = [
+//     new Player({
+//       fill: "green",
+//       strength: { x: 5, y: 60 },
+//       mass: 60,
+//       volume: { w: 50, h: 50 },
+//       position: { x: 50, y: 50 },
+//       velocity: { x: 0, y: 0 },
+//       acceleration: { x: 0, y: 0 },
+//       bouncy: true,
+//       minPosition: { x: 0, y: 0 },
+//       // maxPosition: { x: width, y: height },
+//     }),
+//   ];
+//   const g = new Game(9, CANVAS_ID, bodies);
 
-  const box = new Player({
-    fill: "green",
-    strength: { x: 5, y: 60 },
-    mass: 60,
-    volume: { w: 50, h: 50 },
-    position: { x: 50, y: 50 },
-    velocity: { x: 0, y: 0 },
-    acceleration: { x: 0, y: 0 },
-    bouncy: true,
-    minPosition: { x: 0, y: 0 },
-    maxPosition: { x: width, y: height },
-  });
+//   g.init();
 
-  // const box = new Box({
-  //   fill: "green",
-  //   // strength: { x: 5, y: 5 },
-  //   mass: 60,
-  //   volume: { w: 50, h: 50 },
-  //   position: { x: 50, y: 50 },
-  //   velocity: { x: 0, y: 0 },
-  //   acceleration: { x: 0, y: 0 },
-  //   bouncy: true,
-  //   minPosition: { x: 0, y: 0 },
-  //   maxPosition: { x: width, y: height },
-  // });
+//   g.start();
+// };
 
-  const entities = [box];
+// const game2 = () => {
+//   const canvas = document.getElementById(CANVAS_ID) as
+//     | HTMLCanvasElement
+//     | undefined;
+//   if (!canvas) throw new Error("No canvas found");
+//   const parent = canvas.parentElement;
+//   if (!parent) throw new Error("No parent of canvas found");
+//   const width = parent.clientWidth;
+//   const height = 450;
+//   canvas.setAttribute("width", width.toString());
+//   canvas.setAttribute("height", height.toString());
 
-  let frameCounter = 0;
+//   const box = new Player({
+//     fill: "green",
+//     strength: { x: 5, y: 60 },
+//     mass: 60,
+//     volume: { w: 50, h: 50 },
+//     position: { x: 50, y: 50 },
+//     velocity: { x: 0, y: 0 },
+//     acceleration: { x: 0, y: 0 },
+//     bouncy: true,
+//     minPosition: { x: 0, y: 0 },
+//     maxPosition: { x: width, y: height },
+//   });
 
-  const animate = () => {
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    const paused = canvas.getAttribute("data-paused") === "true";
-    if (paused) {
-      ctx.fillStyle = "red";
-      ctx.font = "18px monospace";
-      ctx.fillText("PAUSED", width - 80, 30);
-      return;
-    }
-    ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = "white";
-    ctx.font = "18px monospace";
-    ctx.fillText("Frame: " + frameCounter, 20, 20);
-    ctx.fillText("Time (ms): " + performance.now().toFixed(), 20, 40);
-    frameCounter++;
-    entities.forEach((b) => b.animate());
+//   // const box = new Box({
+//   //   fill: "green",
+//   //   // strength: { x: 5, y: 5 },
+//   //   mass: 60,
+//   //   volume: { w: 50, h: 50 },
+//   //   position: { x: 50, y: 50 },
+//   //   velocity: { x: 0, y: 0 },
+//   //   acceleration: { x: 0, y: 0 },
+//   //   bouncy: true,
+//   //   minPosition: { x: 0, y: 0 },
+//   //   maxPosition: { x: width, y: height },
+//   // });
 
-    requestAnimationFrame(animate);
-  };
+//   const entities = [box];
 
-  window.addEventListener("pauseChanged", (e) => {
-    if (!(e as PauseChangedEvent).detail.paused) {
-      //   console.log("unpaused");
-      requestAnimationFrame(animate);
-    }
-  });
-  window.addEventListener("stepFrame", () => {
-    canvas.setAttribute("data-paused", "false");
-    animate();
-    canvas.setAttribute("data-paused", "true");
-  });
+//   let frameCounter = 0;
 
-  requestAnimationFrame(animate);
-};
+//   const animate = () => {
+//     const ctx = canvas.getContext("2d");
+//     if (!ctx) return;
+//     const paused = canvas.getAttribute("data-paused") === "true";
+//     if (paused) {
+//       ctx.fillStyle = "red";
+//       ctx.font = "18px monospace";
+//       ctx.fillText("PAUSED", width - 80, 30);
+//       return;
+//     }
+//     ctx.clearRect(0, 0, width, height);
+//     ctx.fillStyle = "white";
+//     ctx.font = "18px monospace";
+//     ctx.fillText("Frame: " + frameCounter, 20, 20);
+//     ctx.fillText("Time (ms): " + performance.now().toFixed(), 20, 40);
+//     frameCounter++;
+//     entities.forEach((b) => b.animate());
+
+//     requestAnimationFrame(animate);
+//   };
+
+//   window.addEventListener("pauseChanged", (e) => {
+//     if (!(e as PauseChangedEvent).detail.paused) {
+//       //   console.log("unpaused");
+//       requestAnimationFrame(animate);
+//     }
+//   });
+//   window.addEventListener("stepFrame", () => {
+//     canvas.setAttribute("data-paused", "false");
+//     animate();
+//     canvas.setAttribute("data-paused", "true");
+//   });
+
+//   requestAnimationFrame(animate);
+// };
 
 type BodyConstructorParams = {
   mass: number;
@@ -159,8 +441,11 @@ type BodyConstructorParams = {
   maxPosition?: XY;
   minPosition?: XY;
   bouncy?: boolean;
+  immovable?: boolean;
+  bounceDampening?: number;
+  gravity?: number;
 };
-abstract class Body {
+export abstract class Body {
   protected ctx = getCtx();
   constructor(protected state: BodyConstructorParams) {}
 
@@ -182,6 +467,37 @@ abstract class Body {
   getMinPosition = () => ({ ...this.state.minPosition });
   getVelocity = () => ({ ...this.state.velocity });
   getAcceleration = () => ({ ...this.state.acceleration });
+
+  getBounds(): LRTB {
+    const { x, y } = this.getPosition();
+    const { w, h } = this.getVolume();
+    return {
+      left: x,
+      right: x + w,
+      top: y,
+      bottom: y + h,
+    };
+  }
+
+  getImmovability(): boolean {
+    return !!this.state.immovable;
+  }
+
+  getBounceDampening(): number {
+    return this.state.bounceDampening ?? 1;
+  }
+
+  setMaxPosition = (p: XY) => {
+    this.state.maxPosition = { ...p };
+  };
+
+  setBounceDampening = (n: number) => {
+    this.state.bounceDampening = n;
+  };
+
+  setGravity = (n: number) => {
+    this.state.gravity = n;
+  };
 
   setMass = (n: number) => {
     this.state.mass = n;
@@ -209,12 +525,12 @@ abstract class Body {
       }
       bouncy &&
         this.updateVelocity((prev) => ({
-          x: -1 * prev.x * BOUNCE_DAMPENING,
+          x: -1 * prev.x * (this.state.bounceDampening ?? BOUNCE_DAMPENING),
           y: prev.y,
         }));
       bouncy &&
         this.updateAcceleration((prev) => ({
-          x: -1 * prev.x * BOUNCE_DAMPENING,
+          x: -1 * prev.x * (this.state.bounceDampening ?? BOUNCE_DAMPENING),
           y: prev.y,
         }));
     }
@@ -228,12 +544,12 @@ abstract class Body {
       bouncy &&
         this.updateVelocity((prev) => ({
           x: prev.x,
-          y: -1 * prev.y * BOUNCE_DAMPENING,
+          y: -1 * prev.y * (this.state.bounceDampening ?? BOUNCE_DAMPENING),
         }));
       bouncy &&
         this.updateAcceleration((prev) => ({
           x: prev.x,
-          y: -1 * prev.y * BOUNCE_DAMPENING,
+          y: -1 * prev.y * (this.state.bounceDampening ?? BOUNCE_DAMPENING),
         }));
     }
     // if (xMin !== undefined && px < xMin) {
@@ -308,6 +624,7 @@ abstract class Body {
    * @param f Force object
    */
   applyForce = (f: XY) => {
+    if (this.state.immovable) return;
     const mass = this.getMass();
     // force = mass * acceleration => acceleration = force / mass
     const ax = f.x / mass;
@@ -319,8 +636,22 @@ abstract class Body {
     this.adjustVelocityByAcceleration();
   };
 
+  applyGravity = () => {
+    // gravity isn't really a force being applied
+    // because it ends up always affecting masses by the same acceleration
+    // this.applyForce({ x: 0, y: this.state.gravity ?? GRAVITY });
+
+    if (this.getImmovability()) return;
+    this.updateAcceleration((prev) => ({
+      x: prev.x,
+      y: prev.y + (this.state.gravity ?? GRAVITY),
+    }));
+    this.adjustVelocityByAcceleration();
+  };
+
   animate(): void {
     this.onAnimateStart();
+    this.applyGravity();
     this.adjustPositionByVelocity();
     this.setAcceleration({ x: 0, y: 0 });
     this.onAnimateEnd();
@@ -334,36 +665,44 @@ class Box extends Body {
     this.fill = fill;
   }
 
-  applyGravity = () => {
-    this.applyForce({ x: 0, y: GRAVITY });
-  };
-
-  onAnimateEnd(): void {
+  drawLabel(): void {
     const {
       position: { x, y },
-      volume: { w, h },
       velocity: { x: vx, y: vy },
       acceleration: { x: ax, y: ay },
     } = this.state;
     if (!this.ctx) return;
-    this.ctx.fillStyle = this.fill;
-    this.ctx.fillRect(x, y, w, h);
     this.ctx.font = "18px monospace";
-    this.ctx.fillText("Position: " + x.toFixed(2) + "," + y.toFixed(2), 20, 60);
+    this.ctx.fillText(
+      "Position: " + x.toFixed(2) + "," + y.toFixed(2),
+      x,
+      y - 60,
+    );
     this.ctx.fillText(
       "Velocity: " + vx.toFixed(2) + "," + vy.toFixed(2),
-      20,
-      80,
+      x,
+      y - 40,
     );
     this.ctx.fillText(
       "Acceleration: " + ax.toFixed(2) + "," + ay.toFixed(2),
-      20,
-      100,
+      x,
+      y - 20,
     );
   }
 
+  onAnimateEnd(): void {
+    // this.drawLabel();
+    const {
+      position: { x, y },
+      volume: { w, h },
+    } = this.state;
+    if (!this.ctx) return;
+    this.ctx.fillStyle = this.fill;
+    this.ctx.fillRect(x, y, w, h);
+  }
+
   onAnimateStart(): void {
-    this.applyGravity();
+    // this.applyGravity();
     // this.adjustVelocityByAcceleration();
     // this.adjustPositionByVelocity();
   }
@@ -381,7 +720,11 @@ class Entity extends Box {
 
   moveRight = () => this.applyForce({ x: this.strength.x, y: 0 });
   moveLeft = () => this.applyForce({ x: -1 * this.strength.x, y: 0 });
-  jump = () => this.applyForce({ x: 0, y: -this.strength.y });
+  jump = () => {
+    const sy = this.strength.y;
+    const fy = (this.state.gravity ?? GRAVITY) > 0 ? -sy : sy;
+    this.applyForce({ x: 0, y: fy });
+  };
 }
 
 class Player extends Entity {
@@ -392,11 +735,16 @@ class Player extends Entity {
   }
 
   registerControls(): void {
+    const keys = ["ArrowLeft", "ArrowRight", " "];
     window.addEventListener("keydown", (e) => {
+      if (!keys.includes(e.key)) return;
       this.pressedKeys[e.key] = true;
+      e.preventDefault();
     });
     window.addEventListener("keyup", (e) => {
+      if (!keys.includes(e.key)) return;
       this.pressedKeys[e.key] = false;
+      e.preventDefault();
       if (
         e.key === "ArrowLeft" ||
         e.key === "ArrowRight" //&&
@@ -427,8 +775,36 @@ class Player extends Entity {
 
   onAnimateStart(): void {
     this.applyKeyPress();
-    this.applyGravity();
+    // this.applyGravity();
     // this.adjustVelocityByAcceleration();
     // this.adjustPositionByVelocity();
+  }
+
+  onAnimateEnd(): void {
+    const {
+      position: { x, y },
+      volume: { w, h },
+      velocity: { x: vx, y: vy },
+      acceleration: { x: ax, y: ay },
+    } = this.state;
+    if (!this.ctx) return;
+    this.ctx.fillStyle = this.fill;
+    this.ctx.fillRect(x, y, w, h);
+    this.ctx.font = "18px monospace";
+    this.ctx.fillText(
+      "Position: " + x.toFixed(2) + "," + y.toFixed(2),
+      20,
+      100,
+    );
+    this.ctx.fillText(
+      "Velocity: " + vx.toFixed(2) + "," + vy.toFixed(2),
+      20,
+      120,
+    );
+    this.ctx.fillText(
+      "Acceleration: " + ax.toFixed(2) + "," + ay.toFixed(2),
+      20,
+      140,
+    );
   }
 }

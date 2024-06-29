@@ -8,7 +8,7 @@ import {
   getRandomInt,
   toNumber,
 } from "@/utils";
-import { useEffect, useRef, useState } from "react";
+import { createRef, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Game } from "./Game";
 import { PauseIcon, PlayIcon, ReloadIcon } from "@radix-ui/react-icons";
@@ -43,279 +43,6 @@ const generateBoxes = (volume: WH, maxPosition: XY, count: number) => {
     );
   }
   return arr;
-};
-
-export const Sandbox = () => {
-  const [game, setGame] = useState<Game>();
-  const [randomDetails, setRandomDetails] = useState({
-    count: 0,
-    size: 50,
-  });
-  const isPaused = useRef(false);
-  // this is soley used for button text
-  // we can't have `isPaused` be stateful since that'd be updated async by react
-  const [pauseState, setPauseState] = useState(false);
-  const DEFAULT_GRAVITY = 2;
-  const DEFAULT_BOUNCE_DAMPENING = 0.7;
-
-  const togglePaused = () => {
-    if (isPaused.current) {
-      isPaused.current = false;
-      setPauseState(false);
-      requestAnimationFrame(animate);
-      return;
-    }
-    isPaused.current = true;
-    setPauseState(true);
-  };
-
-  const setupGame = (reset?: boolean) => {
-    if (game && !reset) return;
-    const bodies = [
-      new Player({
-        fill: "green",
-        strength: { x: 5, y: 50 },
-        mass: 50,
-        volume: { w: 50, h: 50 },
-        position: { x: 50, y: 50 },
-        velocity: { x: 0, y: 0 },
-        acceleration: { x: 0, y: 0 },
-        bouncy: true,
-        minPosition: { x: 0, y: 0 },
-        // maxPosition: { x: width, y: height },
-      }),
-      new Box({
-        fill: "red",
-        // strength: { x: 5, y: 200 },
-        mass: 50,
-        volume: { w: 50, h: 50 },
-        position: { x: 150, y: 50 },
-        velocity: { x: 0, y: 0 },
-        acceleration: { x: 0, y: 0 },
-        bouncy: true,
-        minPosition: { x: 0, y: 0 },
-        // maxPosition: { x: width, y: height },
-      }),
-      new Box({
-        fill: "orange",
-        // strength: { x: 5, y: 200 },
-        mass: 50,
-        volume: { w: 50, h: 50 },
-        position: { x: 200, y: 50 },
-        velocity: { x: 0, y: 0 },
-        acceleration: { x: 0, y: 0 },
-        bouncy: true,
-        minPosition: { x: 0, y: 0 },
-        // maxPosition: { x: width, y: height },
-      }),
-      new Box({
-        fill: "blue",
-        // strength: { x: 5, y: 200 },
-        mass: 50,
-        volume: { w: 50, h: 50 },
-        position: { x: 250, y: 50 },
-        velocity: { x: 0, y: 0 },
-        acceleration: { x: 0, y: 0 },
-        bouncy: true,
-        minPosition: { x: 0, y: 0 },
-        // maxPosition: { x: width, y: height },
-      }),
-      // ...generateBoxes({ w: 50, h: 50 }, { x: 400, y: 500 }, 10),
-    ];
-    const g = new Game(
-      DEFAULT_GRAVITY,
-      DEFAULT_BOUNCE_DAMPENING,
-      CANVAS_ID,
-      bodies,
-    );
-    setGame(g);
-  };
-
-  useEffect(() => {
-    setupGame();
-  }, []);
-
-  const animate = () => {
-    if (!game) {
-      return console.log("no game found");
-    }
-    if (isPaused.current) {
-      return console.log("stopping for pause");
-    }
-    game.animate();
-    return requestAnimationFrame(animate);
-  };
-
-  useEffect(() => {
-    if (!game) return;
-    game.init();
-    animate();
-  }, [game]);
-
-  return (
-    <div className="w-[90vw]">
-      <h1 className="text-4xl font-bold tracking-wide">Sandbox</h1>
-      <br />
-      <canvas width={0} height={0} id={CANVAS_ID} className="border" />
-      <div className="flex flex-wrap items-center gap-4 py-3">
-        <Button onClick={() => togglePaused()}>
-          {pauseState ? <PlayIcon /> : <PauseIcon />}
-        </Button>
-        <Button
-          onClick={() => {
-            isPaused.current = true;
-            togglePaused();
-            setPauseState(true);
-            setTimeout(() => {
-              isPaused.current = true;
-            }, 0);
-            // isPaused = true;
-          }}
-        >
-          step
-        </Button>
-        <Button onClick={() => setupGame(true)}>
-          <ReloadIcon />
-        </Button>
-      </div>
-      <div className="flex flex-wrap items-center gap-4">
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="bodies-count-input" className="text-xl">
-            Count
-          </Label>
-          <Input
-            // key={Math.random()}
-            name="bodies-count-input"
-            id="bodies-count-input"
-            value={randomDetails.count}
-            onChange={(e) => {
-              setRandomDetails((prev) => ({
-                ...prev,
-                count: toNumber(e.target.value),
-              }));
-            }}
-            className="w-24"
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="bodies-size-input" className="text-xl">
-            Size
-          </Label>
-          <Input
-            // key={Math.random()}
-            name="bodies-size-input"
-            id="bodies-size-input"
-            value={randomDetails.size}
-            onChange={(e) => {
-              setRandomDetails((prev) => ({
-                ...prev,
-                size: toNumber(e.target.value),
-              }));
-            }}
-            className="w-24"
-          />
-        </div>
-      </div>
-      <Button
-        className="my-3"
-        onClick={() => {
-          if (!game) return;
-          const canvas = document.getElementById(CANVAS_ID);
-          if (!canvas) return;
-          const x = toNumber(canvas.getAttribute("width"));
-          const y = toNumber(canvas.getAttribute("height"));
-          game.bodies = generateBoxes(
-            { w: randomDetails.size, h: randomDetails.size },
-            { x, y },
-            randomDetails.count,
-          );
-          game.init();
-        }}
-      >
-        generate
-      </Button>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="gravity-slider" className="text-xl">
-          Gravity
-        </Label>
-        <p className="text-muted-foreground">
-          Put positive to have gravity pull down, negative to pull up, and of
-          course zero to have no gravity.
-        </p>
-        <div className="flex items-center gap-2">
-          <span className="text-muted-foreground">-20</span>
-          <div className="flex w-3/4 flex-col">
-            <Slider
-              // makes it so it will rerender whenever game is first set
-              key={Math.random()}
-              name="gravity-slider"
-              id="gravity-slider"
-              min={-20}
-              max={20}
-              // thumbLabel
-              // can't use `value` prop because it's value isn't truly stateful
-              // since this is the only place to every change gravity, this should
-              // always be in sync anyway
-              defaultValue={[DEFAULT_GRAVITY]}
-              onValueChange={([num]) => {
-                if (!game) return;
-                game.gravity = num;
-              }}
-            >
-              {" "}
-              <span className="absolute bottom-[-1.75rem] left-1/2 -translate-x-1/2 text-muted-foreground">
-                0
-              </span>
-            </Slider>
-          </div>
-          <span className="text-muted-foreground">20</span>
-        </div>
-      </div>
-      <br />
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="gravity-slider" className="text-xl">
-          Bounce dampening
-        </Label>
-        <p className="text-muted-foreground">
-          A multiplier to affect the velocity of an object after it collides
-          with something (like the wall).{" "}
-        </p>
-        <ul className="list-disc pl-8 text-muted-foreground">
-          <li>0 → velocity becomes zero</li>
-          <li>.5 → velocity is cut in half</li>
-          <li>1 → velocity stays same</li>
-        </ul>
-        <div className="flex items-center gap-2">
-          <span className="text-muted-foreground">0</span>
-          <div className="flex w-3/4 flex-col">
-            <Slider
-              // makes it so it will rerender whenever game is first set
-              key={Math.random()}
-              name="gravity-slider"
-              id="gravity-slider"
-              min={0}
-              max={1}
-              step={0.1}
-              // thumbLabel
-              // can't use `value` prop because it's value isn't truly stateful
-              // since this is the only place to every change gravity, this should
-              // always be in sync anyway
-              defaultValue={[DEFAULT_BOUNCE_DAMPENING]}
-              onValueChange={([num]) => {
-                if (!game) return;
-                game.bounceDampening = num;
-              }}
-            >
-              <span className="absolute bottom-[-1.75rem] left-1/2 -translate-x-1/2 text-muted-foreground">
-                .5
-              </span>
-            </Slider>
-          </div>
-          <span className="text-muted-foreground">1</span>
-        </div>
-      </div>
-    </div>
-  );
 };
 
 const getCtx = () => {
@@ -739,12 +466,12 @@ class Player extends Entity {
     window.addEventListener("keydown", (e) => {
       if (!keys.includes(e.key)) return;
       this.pressedKeys[e.key] = true;
-      e.preventDefault();
+      // e.preventDefault();
     });
     window.addEventListener("keyup", (e) => {
       if (!keys.includes(e.key)) return;
       this.pressedKeys[e.key] = false;
-      e.preventDefault();
+      // e.preventDefault();
       if (
         e.key === "ArrowLeft" ||
         e.key === "ArrowRight" //&&
@@ -808,3 +535,369 @@ class Player extends Entity {
     );
   }
 }
+
+const eventTarget = new EventTarget();
+export const revalidateEvent = new CustomEvent("revalidate", {
+  detail: {
+    property: "",
+    value: undefined,
+  } as {
+    property: string;
+    value: any;
+  },
+});
+
+const DEFAULT_GRAVITY = 2;
+const DEFAULT_BOUNCE_DAMPENING = 0.7;
+
+const g = new Game(
+  DEFAULT_GRAVITY,
+  DEFAULT_BOUNCE_DAMPENING,
+  CANVAS_ID,
+  [],
+  eventTarget,
+);
+
+export const Sandbox = () => {
+  // const [game, setGame] = useState<Game>();
+  const [randomDetails, setRandomDetails] = useState({
+    count: 0,
+    size: 50,
+  });
+  const isPaused = useRef(false);
+  // this is soley used for button text
+  // we can't have `isPaused` be stateful since that'd be updated async by react
+  const [pauseState, setPauseState] = useState(false);
+
+  const [gameProps, setGameProps] = useState<Record<string, any>>({
+    gravity: DEFAULT_GRAVITY,
+  });
+
+  const updateGamePropState = (prop: string, value: any) => {
+    setGameProps((prev) => ({
+      ...prev,
+      [prop]: value,
+    }));
+  };
+
+  const eventTargetRef = useRef(eventTarget);
+
+  const [gravityState, setGravityState] = useState(DEFAULT_GRAVITY);
+
+  const togglePaused = () => {
+    if (isPaused.current) {
+      isPaused.current = false;
+      setPauseState(false);
+      requestAnimationFrame(animate);
+      return;
+    }
+    isPaused.current = true;
+    setPauseState(true);
+  };
+
+  const setupGame = (reset?: boolean) => {
+    // if (game && !reset) return;
+    // const bodies = [
+    //   new Player({
+    //     fill: "green",
+    //     strength: { x: 5, y: 50 },
+    //     mass: 50,
+    //     volume: { w: 50, h: 50 },
+    //     position: { x: 50, y: 50 },
+    //     velocity: { x: 0, y: 0 },
+    //     acceleration: { x: 0, y: 0 },
+    //     bouncy: true,
+    //     minPosition: { x: 0, y: 0 },
+    //     // maxPosition: { x: width, y: height },
+    //   }),
+    //   new Box({
+    //     fill: "red",
+    //     // strength: { x: 5, y: 200 },
+    //     mass: 50,
+    //     volume: { w: 50, h: 50 },
+    //     position: { x: 150, y: 50 },
+    //     velocity: { x: 0, y: 0 },
+    //     acceleration: { x: 0, y: 0 },
+    //     bouncy: true,
+    //     minPosition: { x: 0, y: 0 },
+    //     // maxPosition: { x: width, y: height },
+    //   }),
+    //   new Box({
+    //     fill: "orange",
+    //     // strength: { x: 5, y: 200 },
+    //     mass: 50,
+    //     volume: { w: 50, h: 50 },
+    //     position: { x: 200, y: 50 },
+    //     velocity: { x: 0, y: 0 },
+    //     acceleration: { x: 0, y: 0 },
+    //     bouncy: true,
+    //     minPosition: { x: 0, y: 0 },
+    //     // maxPosition: { x: width, y: height },
+    //   }),
+    //   new Box({
+    //     fill: "blue",
+    //     // strength: { x: 5, y: 200 },
+    //     mass: 50,
+    //     volume: { w: 50, h: 50 },
+    //     position: { x: 250, y: 50 },
+    //     velocity: { x: 0, y: 0 },
+    //     acceleration: { x: 0, y: 0 },
+    //     bouncy: true,
+    //     minPosition: { x: 0, y: 0 },
+    //     // maxPosition: { x: width, y: height },
+    //   }),
+    //   // ...generateBoxes({ w: 50, h: 50 }, { x: 400, y: 500 }, 10),
+    // ];
+
+    if (g.initComplete) return;
+    g.bodies = [
+      new Player({
+        fill: "green",
+        strength: { x: 5, y: 50 },
+        mass: 50,
+        volume: { w: 50, h: 50 },
+        position: { x: 50, y: 50 },
+        velocity: { x: 0, y: 0 },
+        acceleration: { x: 0, y: 0 },
+        bouncy: true,
+        minPosition: { x: 0, y: 0 },
+        // maxPosition: { x: width, y: height },
+      }),
+    ];
+    g.init();
+    animate();
+
+    eventTargetRef.current.addEventListener("revalidate", (e) => {
+      const {
+        detail: { property, value },
+      } = e as typeof revalidateEvent;
+      console.log("revalidate called", property);
+      if (property !== "gravity") return;
+      const grav = toNumber(value);
+      // const grav = g.getGravity();
+      console.log("react got grav: ", grav);
+      if (!grav) return;
+      updateGamePropState("gravity", grav);
+    });
+    // const g = new Game(
+    //   DEFAULT_GRAVITY,
+    //   DEFAULT_BOUNCE_DAMPENING,
+    //   CANVAS_ID,
+    //   bodies,
+    //   eventTarget,
+    // );
+    // setGame(g);
+  };
+
+  useEffect(
+    () => console.log("gravityState changed: ", gravityState),
+    [gravityState],
+  );
+
+  useEffect(() => {
+    setupGame();
+  }, []);
+
+  useEffect(() => console.log("gameProps: ", gameProps), [gameProps]);
+
+  const animate = () => {
+    // if (!game) {
+    //   return console.log("no game found");
+    // }
+    if (isPaused.current) {
+      return console.log("stopping for pause");
+    }
+    g.animate();
+    return requestAnimationFrame(animate);
+  };
+
+  // useEffect(() => {
+
+  //   g.init();
+  //   animate();
+  // }, []);
+
+  return (
+    <div className="w-[90vw]">
+      <h1 className="text-4xl font-bold tracking-wide">Sandbox</h1>
+      <br />
+      <canvas width={0} height={0} id={CANVAS_ID} className="border" />
+      <div className="flex flex-wrap items-center gap-4 py-3">
+        <Button>Gravity: {gravityState}</Button>
+        <Button onClick={() => togglePaused()}>
+          {pauseState ? <PlayIcon /> : <PauseIcon />}
+        </Button>
+        <Button
+          onClick={() => {
+            isPaused.current = true;
+            togglePaused();
+            setPauseState(true);
+            setTimeout(() => {
+              isPaused.current = true;
+            }, 0);
+            // isPaused = true;
+          }}
+        >
+          step
+        </Button>
+        <Button onClick={() => setupGame(true)}>
+          <ReloadIcon />
+        </Button>
+      </div>
+      <div className="flex flex-wrap items-center gap-4">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="gravity-input" className="text-xl">
+            Gravity
+          </Label>
+          <Input
+            // key={Math.random()}
+            name="gravity-input"
+            id="gravity-input"
+            value={gameProps["gravity"]}
+            onChange={(e) => {
+              const grav = toNumber(e.target.value);
+              updateGamePropState("gravity", grav);
+              g.setGravity(grav);
+              // setGameProps((prev) => ({ ...prev, gravity: g }));
+            }}
+            className="w-24"
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="bodies-count-input" className="text-xl">
+            Count
+          </Label>
+          <Input
+            // key={Math.random()}
+            name="bodies-count-input"
+            id="bodies-count-input"
+            value={randomDetails.count}
+            onChange={(e) => {
+              setRandomDetails((prev) => ({
+                ...prev,
+                count: toNumber(e.target.value),
+              }));
+            }}
+            className="w-24"
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="bodies-size-input" className="text-xl">
+            Size
+          </Label>
+          <Input
+            // key={Math.random()}
+            name="bodies-size-input"
+            id="bodies-size-input"
+            value={randomDetails.size}
+            onChange={(e) => {
+              setRandomDetails((prev) => ({
+                ...prev,
+                size: toNumber(e.target.value),
+              }));
+            }}
+            className="w-24"
+          />
+        </div>
+      </div>
+      {/* <Button
+        className="my-3"
+        onClick={() => {
+          if (!game) return;
+          const canvas = document.getElementById(CANVAS_ID);
+          if (!canvas) return;
+          const x = toNumber(canvas.getAttribute("width"));
+          const y = toNumber(canvas.getAttribute("height"));
+          game.bodies = generateBoxes(
+            { w: randomDetails.size, h: randomDetails.size },
+            { x, y },
+            randomDetails.count,
+          );
+          game.init();
+        }}
+      >
+        generate
+      </Button> */}
+      {/* <div className="flex flex-col gap-2">
+        <Label htmlFor="gravity-slider" className="text-xl">
+          Gravity
+        </Label>
+        <p className="text-muted-foreground">
+          Put positive to have gravity pull down, negative to pull up, and of
+          course zero to have no gravity.
+        </p>
+        <div className="flex items-center gap-2">
+          <span className="text-muted-foreground">-20</span>
+          <div className="flex w-3/4 flex-col">
+            <Slider
+              // makes it so it will rerender whenever game is first set
+              key={Math.random()}
+              name="gravity-slider"
+              id="gravity-slider"
+              min={-20}
+              max={20}
+              // thumbLabel
+              // can't use `value` prop because it's value isn't truly stateful
+              // since this is the only place to every change gravity, this should
+              // always be in sync anyway
+              defaultValue={[DEFAULT_GRAVITY]}
+              onValueChange={([num]) => {
+                if (!game) return;
+                game.gravity = num;
+              }}
+            >
+              {" "}
+              <span className="absolute bottom-[-1.75rem] left-1/2 -translate-x-1/2 text-muted-foreground">
+                0
+              </span>
+            </Slider>
+          </div>
+          <span className="text-muted-foreground">20</span>
+        </div>
+      </div> */}
+      <br />
+      {/* <div className="flex flex-col gap-2">
+      <Label htmlFor="gravity-slider" className="text-xl">
+        Bounce dampening
+      </Label>
+      <p className="text-muted-foreground">
+        A multiplier to affect the velocity of an object after it collides
+        with something (like the wall).{" "}
+      </p>
+      <ul className="list-disc pl-8 text-muted-foreground">
+        <li>0 → velocity becomes zero</li>
+        <li>.5 → velocity is cut in half</li>
+        <li>1 → velocity stays same</li>
+      </ul>
+      <div className="flex items-center gap-2">
+        <span className="text-muted-foreground">0</span>
+        <div className="flex w-3/4 flex-col">
+          <Slider
+            // makes it so it will rerender whenever game is first set
+            key={Math.random()}
+            name="gravity-slider"
+            id="gravity-slider"
+            min={0}
+            max={1}
+            step={0.1}
+            // thumbLabel
+            // can't use `value` prop because it's value isn't truly stateful
+            // since this is the only place to every change gravity, this should
+            // always be in sync anyway
+            defaultValue={[DEFAULT_BOUNCE_DAMPENING]}
+            onValueChange={([num]) => {
+              if (!game) return;
+              game.bounceDampening = num;
+            }}
+          >
+            <span className="absolute bottom-[-1.75rem] left-1/2 -translate-x-1/2 text-muted-foreground">
+              .5
+            </span>
+          </Slider>
+        </div>
+        <span className="text-muted-foreground">1</span>
+      </div>
+    </div> */}
+    </div>
+  );
+};

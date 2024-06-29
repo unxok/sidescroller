@@ -4,6 +4,7 @@ import { Sidescroller } from "@/components/Sidescroller";
 import { buttonVariants } from "@/components/ui/button";
 import { HTMLAttributes, ReactNode } from "react";
 import { Sandbox } from "./components/Sandbox";
+import { SandboxV2 } from "./components/SandboxV2";
 export const CANVAS_WIDTH = 450;
 export const CANVAS_HEIGHT = 450;
 
@@ -13,6 +14,7 @@ const routes = {
   "/A_Dive_into_2D_game_physics": <PhysicsArticle />,
   "/game": <Sidescroller />,
   "/sandbox": <Sandbox />,
+  "/sandboxV2": <SandboxV2 />,
 };
 
 const App = () => {
@@ -36,6 +38,12 @@ const App = () => {
         </Link>
         <Link href={"/sandbox"} className={buttonVariants({ variant: "link" })}>
           Sandbox
+        </Link>
+        <Link
+          href={"/sandboxV2"}
+          className={buttonVariants({ variant: "link" })}
+        >
+          Sandbox V2
         </Link>
       </header>
       <br />

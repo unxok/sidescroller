@@ -1,4 +1,4 @@
-import { Body } from "@/components/Sandbox";
+import { Body, revalidateEvent } from "@/components/Sandbox";
 import { LRTB, XY } from "@/utils";
 
 const checkCollision = (body1: Body, body2: Body) => {
@@ -75,35 +75,47 @@ const calculatePositionAfterCollision: (b1: LRTB, b2: LRTB) => XY = (
 };
 
 export class Game {
-  private ctx: CanvasRenderingContext2D;
-  private width: number;
+  private ctx: CanvasRenderingContext2D =
+    // don't worry about it lmao
+    "dontworryaboutit" as unknown as CanvasRenderingContext2D;
+  private width: number = 450;
   private height: number = 450;
   private frameCounter: number = 0;
   public isPaused = false;
+  public initComplete = false;
   constructor(
     public gravity: number,
     public bounceDampening: number,
     private canvasId: string,
     public bodies: Body[],
+    public eventTarget: EventTarget,
   ) {
     this.gravity = gravity;
     this.bounceDampening = bounceDampening;
     this.canvasId = canvasId;
     this.bodies = bodies;
-    const { ctx, width } = getCanvasInfo(canvasId);
-    this.ctx = ctx;
-    this.width = width;
     // console.log(this);
   }
 
+  dispatchChange(propertyName: string, value: any): void {
+    const ev = revalidateEvent;
+    ev.detail.property = propertyName;
+    ev.detail.value = value;
+    this.eventTarget.dispatchEvent(ev);
+  }
+
   init(): void {
+    const { ctx, width } = getCanvasInfo(this.canvasId);
+    this.ctx = ctx;
+    this.width = width;
     console.log("init");
     this.setCanvasDimensions();
-    const { width, height } = this;
+    const { height } = this;
     const p = { x: width, y: height };
     this.bodies.forEach((b) => {
       b.setMaxPosition(p);
     });
+    this.initComplete = true;
   }
 
   setCanvasDimensions(): void {
@@ -113,6 +125,15 @@ export class Game {
     }
     el.setAttribute("width", this.width.toString());
     el.setAttribute("height", this.height.toString());
+  }
+
+  getGravity(): number {
+    return this.gravity;
+  }
+
+  setGravity(ay: number): void {
+    this.gravity = ay;
+    this.dispatchChange("gravity", ay);
   }
 
   checkAndFixCollision(b1: Body, b2: Body): void {
@@ -150,6 +171,7 @@ export class Game {
    * @returns That (this)
    */
   animate(): void {
+    // console.log("game animated");
     // if (this.isPaused) return;
     // console.log("paused? ", that.isPaused);
     // console.log("this: ", that);
@@ -181,9 +203,10 @@ export class Game {
         this.checkAndFixCollision(b1, b2);
       }
     }
+    // if (this.gravity < 17) {
+    //   this.setGravity(this.gravity + 1);
+    // }
   }
-
-  // requestAnimationFrame(() => this.animate(this));
 }
 
 //   start(): void {

@@ -28,6 +28,7 @@ import { motion, useDragControls } from "framer-motion";
 const CANVAS_ID = "sandbox-v2";
 const CANVAS_HEIGHT = 450;
 const DEFAULT_GRAVITY = 7;
+const DEFAULT_BOUNCE_DAMPENING = 0.5;
 
 const defaultBodyState: BodyProps = {
   position: { x: 20, y: 20 },
@@ -45,6 +46,7 @@ export const SandboxV2 = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [gameState, setGameState] = useState<ReactiveGameProps>({
     gravity: DEFAULT_GRAVITY,
+    bounceDampening: DEFAULT_BOUNCE_DAMPENING,
   });
   const [bodiesState, setBodiesState] =
     useState<(ReactiveBodyProps & { clicked: boolean; uid: number })[]>();
@@ -59,6 +61,7 @@ export const SandboxV2 = () => {
       {
         canvasId: CANVAS_ID,
         gravity: DEFAULT_GRAVITY,
+        bounceDampening: DEFAULT_BOUNCE_DAMPENING,
         height: CANVAS_HEIGHT,
         width: 900,
       },
@@ -162,6 +165,8 @@ export const SandboxV2 = () => {
             createBody({ x, y });
             return;
           }
+
+          gameRef.current.bodies[f].reactive = true;
           setBodiesState((prev) => {
             if (!prev) throw new Error("this should be impossible");
             const copy = [...prev];
@@ -183,14 +188,20 @@ export const SandboxV2 = () => {
             b.clicked && (
               <DragCard
                 key={"draggable-body-controls-" + i}
-                onClose={() =>
+                onClose={() => {
+                  if (!gameRef.current.bodies) {
+                    throw new Error(
+                      "Drag card on close error. No bodies exist",
+                    );
+                  }
+                  gameRef.current.bodies[i].reactive = false;
                   setBodiesState((prev) => {
                     if (!prev) return;
                     const copy = [...prev];
                     copy[i].clicked = false;
                     return copy;
-                  })
-                }
+                  });
+                }}
               >
                 <BodyControls
                   bodyState={b}
@@ -350,6 +361,25 @@ const GameControls = ({
         />
         <span className="text-muted-foreground">20</span>
       </div>
+      <div className="flex items-center gap-2 py-2">
+        <Label htmlFor="bounce-dampening-slider" className="whitespace-nowrap">
+          Bounce dampening
+        </Label>
+        <span className="text-muted-foreground">0</span>
+        <Slider
+          name="bounce-dampening-slider"
+          id="bounce-dampening-slider"
+          thumbLabel
+          min={0}
+          max={1}
+          step={0.1}
+          value={[gameState.bounceDampening]}
+          onValueChange={(arr) => {
+            gameRef.current.setBounceDampening(toNumber(arr[0]));
+          }}
+        />
+        <span className="text-muted-foreground">1</span>
+      </div>
     </div>
   );
 };
@@ -369,10 +399,10 @@ const BodyControls = ({
     <Collapsible defaultOpen className="flex flex-col gap-4 py-10">
       <div>
         <div className="flex items-center gap-2">
+          <h3 className="text-xl font-bold tracking-wide">Body controls</h3>
           <CollapsibleTrigger>
             <CaretSortIcon />
           </CollapsibleTrigger>
-          <h3 className="text-xl font-bold tracking-wide">Body controls</h3>
         </div>
         <p className="text-muted-foreground">uid: {bodyState.uid}</p>
       </div>
@@ -449,7 +479,7 @@ const BodyControls = ({
                 min={0}
                 max={gameRef.current.getWidth() - bodyState.volume.w}
                 step={1}
-                value={[bodyState.position.x]}
+                value={[Number(bodyState.position.x.toFixed(2))]}
                 onValueChange={(arr) => {
                   const { bodies } = gameRef.current;
                   if (!bodies)
@@ -481,7 +511,7 @@ const BodyControls = ({
                 min={0}
                 max={CANVAS_HEIGHT - bodyState.volume.h}
                 step={1}
-                value={[bodyState.position.y]}
+                value={[Number(bodyState.position.y.toFixed(2))]}
                 onValueChange={(arr) => {
                   const { bodies } = gameRef.current;
                   if (!bodies)
@@ -526,7 +556,7 @@ const BodyControls = ({
                 min={-50}
                 max={50}
                 step={1}
-                value={[bodyState.velocity.x]}
+                value={[Number(bodyState.velocity.x.toFixed(2))]}
                 onValueChange={(arr) => {
                   const { bodies } = gameRef.current;
                   if (!bodies)
@@ -556,7 +586,7 @@ const BodyControls = ({
                 min={-50}
                 max={50}
                 step={1}
-                value={[bodyState.velocity.y]}
+                value={[Number(bodyState.velocity.y.toFixed(2))]}
                 onValueChange={(arr) => {
                   const { bodies } = gameRef.current;
                   if (!bodies)
@@ -567,6 +597,45 @@ const BodyControls = ({
                     x: prev.x,
                     y: toNumber(arr[0]),
                   }));
+                }}
+              />
+              <span className="text-muted-foreground">50</span>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+        <Collapsible defaultOpen>
+          <div className="flex items-center">
+            <h4 className="text-lg font-bold tracking-wide">
+              <i>Mass</i>
+            </h4>
+            <CollapsibleTrigger>
+              <CaretSortIcon />
+            </CollapsibleTrigger>
+          </div>
+          <CollapsibleContent className="flex flex-col gap-4 pt-4">
+            <div className="flex items-center gap-2">
+              <Label
+                htmlFor={`mass-slider-` + uid}
+                className="sr-only whitespace-nowrap"
+              >
+                Mass slider
+              </Label>
+              <span className="text-muted-foreground">0</span>
+              <Slider
+                name={`mass-slider-` + uid}
+                id={`mass-slider-` + uid}
+                thumbLabel
+                min={0}
+                max={100}
+                step={1}
+                value={[bodyState.mass]}
+                onValueChange={(arr) => {
+                  const { bodies } = gameRef.current;
+                  if (!bodies)
+                    throw new Error(
+                      "tried updating bodies when none exist in game",
+                    );
+                  bodies[uid].setMass(toNumber(arr[0]));
                 }}
               />
               <span className="text-muted-foreground">50</span>

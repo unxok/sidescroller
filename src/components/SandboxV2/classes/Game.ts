@@ -1,4 +1,9 @@
 import { LRTB, WH, XY, assert } from "@/utils";
+import {
+  calculatePositionAfterCollision,
+  calculateVelocityAfterCollision,
+  checkCollision,
+} from "./collision";
 
 export type StateUpdater<T> = (key: keyof T, value: T[keyof T]) => void;
 export type StateUpdaterByUID<T> = (
@@ -37,6 +42,7 @@ abstract class Dispatchable<T> {
 // there's gotta be a better way than this...
 export type ReactiveGameProps = {
   gravity: number;
+  bounceDampening: number;
 };
 
 export type GameProps = {
@@ -49,6 +55,7 @@ export type GameProps = {
 
 export class Game {
   private gravity: GameProps["gravity"];
+  private bounceDampening: GameProps["bounceDampening"];
   private canvasId: GameProps["canvasId"];
   private ctx: GameProps["ctx"];
   private width: GameProps["width"];
@@ -61,6 +68,7 @@ export class Game {
     updateExternalState: StateUpdater<ReactiveGameProps>,
   ) {
     this.gravity = props.gravity;
+    this.bounceDampening = props.bounceDampening;
     this.canvasId = props.canvasId;
     this.width = props.width;
     this.height = props.height;
@@ -91,6 +99,11 @@ export class Game {
     this.updateExternalState("gravity", ay);
   }
 
+  setBounceDampening(n: number): void {
+    this.bounceDampening = n;
+    this.updateExternalState("bounceDampening", n);
+  }
+
   setBodies(bodies: Body[]): void {
     this.bodies = [...bodies];
   }
@@ -103,6 +116,45 @@ export class Game {
   initCtx(): CanvasRenderingContext2D {
     const { canvasId } = this;
     return getCtx(canvasId);
+  }
+
+  handleOutOfBounds(b: Body): void {
+    const { left, right, top, bottom } = b.getBounds();
+    const handleVelocityVertical = () => {
+      b.updateVelocity((prev) => ({
+        x: prev.x,
+        y: -1 * prev.y * this.bounceDampening,
+      }));
+    };
+    const handleVelocityHorizontal = () => {
+      b.updateVelocity((prev) => ({
+        x: -1 * prev.x * this.bounceDampening,
+        y: prev.y,
+      }));
+    };
+    // b.draw();
+    if (bottom > this.height) {
+      handleVelocityVertical();
+      b.updatePosition((prev) => ({
+        x: prev.x,
+        y: this.height - (bottom - top),
+      }));
+    }
+    if (top < 0) {
+      handleVelocityVertical();
+      b.updatePosition((prev) => ({ x: prev.x, y: 0 }));
+    }
+    if (left < 0) {
+      handleVelocityHorizontal();
+      b.updatePosition((prev) => ({ x: 0, y: prev.y }));
+    }
+    if (right > this.width) {
+      handleVelocityHorizontal();
+      b.updatePosition((prev) => ({
+        x: this.width - (right - left),
+        y: prev.y,
+      }));
+    }
   }
 
   animate(): void {
@@ -122,34 +174,32 @@ export class Game {
 
     if (!bodies) return;
 
-    bodies.forEach((b) => {
-      b.applyGravity(this.gravity);
-      b.draw();
-      const { left, right, top, bottom } = b.getBounds();
-      // b.draw();
-      if (bottom > this.height) {
-        b.updateVelocity((prev) => ({ x: prev.x, y: 0 }));
-        b.updatePosition((prev) => ({
-          x: prev.x,
-          y: this.height - (bottom - top),
-        }));
+    for (let i = 0; i < bodies.length; i++) {
+      const b1 = bodies[i];
+      const bounds1 = b1.getBounds();
+      b1.applyGravity(this.gravity);
+      b1.draw();
+      this.handleOutOfBounds(b1);
+      for (let j = i + 1; j < bodies.length; j++) {
+        const b2 = bodies[j];
+        const bounds2 = b2.getBounds();
+        const isCollision = checkCollision(bounds1, bounds2);
+        if (isCollision) {
+          const [v1, v2] = calculateVelocityAfterCollision(
+            b1.getMass(),
+            b2.getMass(),
+            b1.getVelocity(),
+            b2.getVelocity(),
+            this.bounceDampening,
+            this.bounceDampening,
+          );
+          const p1 = calculatePositionAfterCollision(bounds1, bounds2);
+          b1.setPosition(p1);
+          b1.setVelocity(v1);
+          b2.setVelocity(v2);
+        }
       }
-      if (top < 0) {
-        b.updateVelocity((prev) => ({ x: prev.x, y: 0 }));
-        b.updatePosition((prev) => ({ x: prev.x, y: 0 }));
-      }
-      if (left < 0) {
-        b.updateVelocity((prev) => ({ x: 0, y: prev.y }));
-        b.updatePosition((prev) => ({ x: 0, y: prev.y }));
-      }
-      if (right > this.width) {
-        b.updateVelocity((prev) => ({ x: 0, y: prev.y }));
-        b.updatePosition((prev) => ({
-          x: this.width - (right - left),
-          y: prev.y,
-        }));
-      }
-    });
+    }
   }
 }
 
@@ -181,7 +231,9 @@ export class Body {
   private canvasId: BodyProps["canvasId"];
   public ctx: BodyProps["ctx"];
   private updateExternalState: StateUpdaterByUID<ReactiveBodyProps>;
-  private uid: number;
+  private uid: BodyProps["uid"];
+  //
+  public reactive: boolean = false;
 
   constructor(
     props: BodyProps,
@@ -199,6 +251,11 @@ export class Body {
     this.updateExternalState = updateExternalState;
     this.uid = props.uid;
   }
+
+  syncReactive: typeof this.updateExternalState = (key, value, uid) => {
+    if (!this.reactive) return;
+    this.updateExternalState(key, value, uid);
+  };
 
   initCtx(): CanvasRenderingContext2D {
     const { canvasId } = this;
@@ -222,6 +279,14 @@ export class Body {
     };
   }
 
+  getMass(): number {
+    return this.mass;
+  }
+
+  getVelocity(): XY {
+    return this.velocity;
+  }
+
   getUID(): number {
     return this.uid;
   }
@@ -229,12 +294,12 @@ export class Body {
   setUID(uid: number): void {
     const old = this.uid;
     this.uid = uid;
-    this.updateExternalState("uid", uid, old);
+    this.syncReactive("uid", uid, old);
   }
 
   setPosition(value: BodyProps["position"]): void {
     this.position = { ...value };
-    this.updateExternalState("position", { ...value }, this.uid);
+    this.syncReactive("position", { ...value }, this.uid);
   }
   updatePosition(cb: (pos: XY) => XY): void {
     const newPos = cb({ ...this.position });
@@ -242,15 +307,15 @@ export class Body {
   }
   setVolume(value: BodyProps["volume"]): void {
     this.volume = { ...value };
-    this.updateExternalState("volume", { ...value }, this.uid);
+    this.syncReactive("volume", { ...value }, this.uid);
   }
   setMass(value: BodyProps["mass"]): void {
     this.mass = value;
-    this.updateExternalState("mass", value, this.uid);
+    this.syncReactive("mass", value, this.uid);
   }
   setVelocity(value: BodyProps["velocity"]): void {
     this.velocity = { ...value };
-    this.updateExternalState("velocity", { ...value }, this.uid);
+    this.syncReactive("velocity", { ...value }, this.uid);
   }
   updateVelocity(cb: (vel: XY) => XY): void {
     const newVel = cb({ ...this.velocity });
@@ -258,7 +323,7 @@ export class Body {
   }
   setAcceleration(value: BodyProps["acceleration"]): void {
     this.acceleration = { ...value };
-    this.updateExternalState("acceleration", { ...value }, this.uid);
+    this.syncReactive("acceleration", { ...value }, this.uid);
   }
   updateAcceleration(cb: (acc: XY) => XY): void {
     const newAcc = cb({ ...this.acceleration });
@@ -266,11 +331,11 @@ export class Body {
   }
   setImmovable(value: BodyProps["immovable"]): void {
     this.immovable = value;
-    this.updateExternalState("immovable", value, this.uid);
+    this.syncReactive("immovable", value, this.uid);
   }
   setFill(value: BodyProps["fill"]): void {
     this.fill = value;
-    this.updateExternalState("fill", value, this.uid);
+    this.syncReactive("fill", value, this.uid);
   }
 
   applyGravity(ay: number): void {

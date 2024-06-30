@@ -1,6 +1,11 @@
 import { LRTB, WH, XY, assert } from "@/utils";
 
 export type StateUpdater<T> = (key: keyof T, value: T[keyof T]) => void;
+export type StateUpdaterByUID<T> = (
+  key: keyof T,
+  value: T[keyof T],
+  uid: number,
+) => void;
 
 const getCtx = (canvasId: string) => {
   const el = document.getElementById(canvasId);
@@ -63,6 +68,17 @@ export class Game {
     this.updateExternalState = updateExternalState;
   }
 
+  generateBodyUID(): number {
+    const newUID = Math.floor(Math.random() * 1000000);
+    const { bodies } = this;
+    if (!bodies) return newUID;
+    const dup = bodies.some((b) => b.getUID() === newUID);
+    if (dup) {
+      return this.generateBodyUID();
+    }
+    return newUID;
+  }
+
   getWidth(): number {
     return this.width;
   }
@@ -106,7 +122,34 @@ export class Game {
 
     if (!bodies) return;
 
-    bodies.forEach((b) => b.draw());
+    bodies.forEach((b) => {
+      b.applyGravity(this.gravity);
+      b.draw();
+      const { left, right, top, bottom } = b.getBounds();
+      // b.draw();
+      if (bottom > this.height) {
+        b.updateVelocity((prev) => ({ x: prev.x, y: 0 }));
+        b.updatePosition((prev) => ({
+          x: prev.x,
+          y: this.height - (bottom - top),
+        }));
+      }
+      if (top < 0) {
+        b.updateVelocity((prev) => ({ x: prev.x, y: 0 }));
+        b.updatePosition((prev) => ({ x: prev.x, y: 0 }));
+      }
+      if (left < 0) {
+        b.updateVelocity((prev) => ({ x: 0, y: prev.y }));
+        b.updatePosition((prev) => ({ x: 0, y: prev.y }));
+      }
+      if (right > this.width) {
+        b.updateVelocity((prev) => ({ x: 0, y: prev.y }));
+        b.updatePosition((prev) => ({
+          x: this.width - (right - left),
+          y: prev.y,
+        }));
+      }
+    });
   }
 }
 
@@ -118,10 +161,12 @@ export type ReactiveBodyProps = {
   acceleration: XY;
   immovable: boolean;
   fill: string;
+  uid: number;
 };
 
 export type BodyProps = ReactiveBodyProps & {
   canvasId: string;
+
   ctx?: CanvasRenderingContext2D;
 };
 
@@ -135,11 +180,12 @@ export class Body {
   private fill: BodyProps["fill"];
   private canvasId: BodyProps["canvasId"];
   public ctx: BodyProps["ctx"];
-  private updateExternalState: StateUpdater<ReactiveBodyProps>;
+  private updateExternalState: StateUpdaterByUID<ReactiveBodyProps>;
+  private uid: number;
 
   constructor(
     props: BodyProps,
-    updateExternalState: StateUpdater<ReactiveBodyProps>,
+    updateExternalState: StateUpdaterByUID<ReactiveBodyProps>,
   ) {
     this.position = props.position;
     this.volume = props.volume;
@@ -151,6 +197,7 @@ export class Body {
     this.canvasId = props.canvasId;
     // this.ctx = props.ctx <-- Since we're in react, this should be called later
     this.updateExternalState = updateExternalState;
+    this.uid = props.uid;
   }
 
   initCtx(): CanvasRenderingContext2D {
@@ -175,9 +222,19 @@ export class Body {
     };
   }
 
+  getUID(): number {
+    return this.uid;
+  }
+
+  setUID(uid: number): void {
+    const old = this.uid;
+    this.uid = uid;
+    this.updateExternalState("uid", uid, old);
+  }
+
   setPosition(value: BodyProps["position"]): void {
     this.position = { ...value };
-    this.updateExternalState("position", { ...value });
+    this.updateExternalState("position", { ...value }, this.uid);
   }
   updatePosition(cb: (pos: XY) => XY): void {
     const newPos = cb({ ...this.position });
@@ -185,27 +242,58 @@ export class Body {
   }
   setVolume(value: BodyProps["volume"]): void {
     this.volume = { ...value };
-    this.updateExternalState("volume", { ...value });
+    this.updateExternalState("volume", { ...value }, this.uid);
   }
   setMass(value: BodyProps["mass"]): void {
     this.mass = value;
-    this.updateExternalState("mass", value);
+    this.updateExternalState("mass", value, this.uid);
   }
   setVelocity(value: BodyProps["velocity"]): void {
     this.velocity = { ...value };
-    this.updateExternalState("velocity", { ...value });
+    this.updateExternalState("velocity", { ...value }, this.uid);
+  }
+  updateVelocity(cb: (vel: XY) => XY): void {
+    const newVel = cb({ ...this.velocity });
+    this.setVelocity(newVel);
   }
   setAcceleration(value: BodyProps["acceleration"]): void {
     this.acceleration = { ...value };
-    this.updateExternalState("acceleration", { ...value });
+    this.updateExternalState("acceleration", { ...value }, this.uid);
+  }
+  updateAcceleration(cb: (acc: XY) => XY): void {
+    const newAcc = cb({ ...this.acceleration });
+    this.setAcceleration(newAcc);
   }
   setImmovable(value: BodyProps["immovable"]): void {
     this.immovable = value;
-    this.updateExternalState("immovable", value);
+    this.updateExternalState("immovable", value, this.uid);
   }
   setFill(value: BodyProps["fill"]): void {
     this.fill = value;
-    this.updateExternalState("fill", value);
+    this.updateExternalState("fill", value, this.uid);
+  }
+
+  applyGravity(ay: number): void {
+    if (this.immovable) return;
+    this.updateAcceleration((prev) => ({
+      x: prev.x,
+      y: prev.y + ay,
+    }));
+  }
+
+  onBeforeDraw(): void {
+    this.updateVelocity((prev) => ({
+      x: prev.x + this.acceleration.x,
+      y: prev.y + this.acceleration.y,
+    }));
+    this.updatePosition((prev) => ({
+      x: prev.x + this.velocity.x,
+      y: prev.y + this.velocity.y,
+    }));
+  }
+
+  onAferDraw(): void {
+    this.setAcceleration({ x: 0, y: 0 });
   }
 
   draw(): void {
@@ -218,7 +306,11 @@ export class Body {
     if (!ctx)
       throw new Error("Tried drawing on canvas when context is undefined");
 
+    this.onBeforeDraw();
+
     ctx.fillStyle = fill;
     ctx.fillRect(x, y, w, h);
+
+    this.onAferDraw();
   }
 }

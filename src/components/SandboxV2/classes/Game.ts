@@ -195,8 +195,15 @@ export class Game {
           );
           const p1 = calculatePositionAfterCollision(bounds1, bounds2);
           b1.setPosition(p1);
-          b1.setVelocity(v1);
-          b2.setVelocity(v2);
+          if (!b1.getImmovable()) {
+            console.log(b1.getFill() + " is movable");
+            b1.setVelocity(v1);
+          }
+
+          if (!b2.getImmovable()) {
+            console.log(b2.getFill() + " is movable");
+            b2.setVelocity(v2);
+          }
         }
       }
     }
@@ -212,6 +219,7 @@ export type ReactiveBodyProps = {
   immovable: boolean;
   fill: string;
   uid: number;
+  player: boolean;
 };
 
 export type BodyProps = ReactiveBodyProps & {
@@ -279,6 +287,10 @@ export class Body {
     };
   }
 
+  getImmovable(): boolean {
+    return this.immovable;
+  }
+
   getMass(): number {
     return this.mass;
   }
@@ -332,6 +344,10 @@ export class Body {
   setImmovable(value: BodyProps["immovable"]): void {
     this.immovable = value;
     this.syncReactive("immovable", value, this.uid);
+
+    if (value) {
+      this.setVelocity({ x: 0, y: 0 });
+    }
   }
   setFill(value: BodyProps["fill"]): void {
     this.fill = value;

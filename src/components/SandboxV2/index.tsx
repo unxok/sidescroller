@@ -24,6 +24,8 @@ import {
   WidthIcon,
 } from "@radix-ui/react-icons";
 import { motion, useDragControls } from "framer-motion";
+import { Toggle } from "../ui/toggle";
+import { Switch } from "../ui/switch";
 
 const CANVAS_ID = "sandbox-v2";
 const CANVAS_HEIGHT = 450;
@@ -40,6 +42,7 @@ const defaultBodyState: BodyProps = {
   fill: "#1ce91f",
   canvasId: CANVAS_ID,
   uid: -1,
+  player: false,
 };
 
 export const SandboxV2 = () => {
@@ -626,7 +629,7 @@ const BodyControls = ({
                 id={`mass-slider-` + uid}
                 thumbLabel
                 min={0}
-                max={100}
+                max={100000}
                 step={1}
                 value={[bodyState.mass]}
                 onValueChange={(arr) => {
@@ -638,7 +641,47 @@ const BodyControls = ({
                   bodies[uid].setMass(toNumber(arr[0]));
                 }}
               />
-              <span className="text-muted-foreground">50</span>
+              <span className="text-muted-foreground">5000</span>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+        <Collapsible defaultOpen>
+          <div className="flex items-center">
+            <h4 className="text-lg font-bold tracking-wide">
+              <i>Switches</i>
+            </h4>
+            <CollapsibleTrigger>
+              <CaretSortIcon />
+            </CollapsibleTrigger>
+          </div>
+          <CollapsibleContent className="flex flex-col gap-4 pt-4">
+            <div className="flex items-center gap-3">
+              <Label>Immovable</Label>
+              <Switch
+                checked={!!bodyState.immovable}
+                onCheckedChange={(b) => {
+                  const { bodies } = gameRef.current;
+                  if (!bodies)
+                    throw new Error(
+                      "tried updating bodies when none exist in game",
+                    );
+                  bodies[uid].setImmovable(b);
+                }}
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <Label>Player controlled</Label>
+              <Switch
+                checked={!!bodyState.immovable}
+                onCheckedChange={(b) => {
+                  const { bodies } = gameRef.current;
+                  if (!bodies)
+                    throw new Error(
+                      "tried updating bodies when none exist in game",
+                    );
+                  bodies[uid].setImmovable(b);
+                }}
+              />
             </div>
           </CollapsibleContent>
         </Collapsible>

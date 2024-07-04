@@ -5,6 +5,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { HTMLAttributes, ReactNode } from "react";
 import { Sandbox } from "./components/Sandbox";
 import { SandboxV2 } from "./components/SandboxV2";
+import { SandboxV3 } from "./components/SandboxV3";
 export const CANVAS_WIDTH = 450;
 export const CANVAS_HEIGHT = 450;
 
@@ -15,6 +16,7 @@ const routes = {
   "/game": <Sidescroller />,
   "/sandbox": <Sandbox />,
   "/sandboxV2": <SandboxV2 />,
+  "/sandboxV3": <SandboxV3 />,
 };
 
 const App = () => {
@@ -44,6 +46,12 @@ const App = () => {
           className={buttonVariants({ variant: "link" })}
         >
           Sandbox V2
+        </Link>
+        <Link
+          href={"/sandboxV3"}
+          className={buttonVariants({ variant: "link" })}
+        >
+          Sandbox V3
         </Link>
       </header>
       <br />

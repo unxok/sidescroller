@@ -1,6 +1,15 @@
 export class Vector2 extends Array<number> {
-  constructor(x: number, y: number) {
-    super(x, y);
+  constructor(x: number | { magnitude: number; angle: number }, y?: number) {
+    if (typeof x === "number" && typeof y === "number") {
+      super(x, y);
+      return;
+    }
+    if (typeof x === "object") {
+      const { magnitude, angle } = x;
+      super(magnitude * Math.cos(angle), magnitude * Math.sin(angle));
+      return;
+    }
+    throw new Error("invalid constructor for Vector2");
   }
 
   getMagnitude(): number {
